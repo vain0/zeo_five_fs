@@ -2,15 +2,22 @@
 
 [<AutoOpen>]
 module Types =
-  type CardId =
-    | CardId of int
-
   type internal T5<'T> =
     'T * 'T * 'T * 'T * 'T
     
   type PlayerId =
     | Player1
     | Player2
+
+  type NPCardId =
+    | Card1
+    | Card2
+    | Card3
+    | Card4
+    | Card5
+
+  type CardId =
+    PlayerId * NPCardId
 
   type AttackWay =
     | PhysicalAttack
@@ -29,7 +36,6 @@ module Types =
     {
       Spec    : CardSpec
       CardId  : CardId
-      Owner   : PlayerId
       Damage  : int
       PrevWay : option<AttackWay>
     }

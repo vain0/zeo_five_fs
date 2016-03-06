@@ -2,21 +2,29 @@
 
 [<AutoOpen>]
 module Misc =
-  let newCardId =
-    let r = ref 0
-    fun () ->
-      let i = ! r
-      do r := i + 1
-      i |> CardId
-
   let flip f x y = f y x
 
+module T5 =
+  let zip (x0, x1, x2, x3, x4) (y0, y1, y2, y3, y4) =
+    ((x0, y0), (x1, y1), (x2, y2), (x3, y3), (x4, y4))
+
+  let map f (x0, x1, x2, x3, x4) =
+    (f x0, f x1, f x2, f x3, f x4)
+
+  let replicate x =
+    (x, x, x, x, x)
+
+  let toList (x0, x1, x2, x3, x4) =
+    [x0; x1; x2; x3; x4]
+
+module NPCardId =
+  let all = (Card1, Card2, Card3, Card4, Card5)
+
 module Card =
-  let init pl spec =
+  let init cardId spec =
     {
       Spec    = spec
-      Owner   = pl
-      CardId  = newCardId ()
+      CardId  = cardId
       Damage  = 0
       PrevWay = None
     }
@@ -35,10 +43,8 @@ module Card =
     | PhysicalAttack -> card.Spec.Atk
     | MagicalAttack  -> card.Spec.Itl
 
-module Deck =
-  let cardList (deck: Deck) =
-    let (c0, c1, c2, c3, c4) = deck.Cards
-    in [c0; c1; c2; c3; c4]
+  let owner (card: Card) =
+    card.CardId |> fst
 
 module Player =
   let inverse =
@@ -55,17 +61,18 @@ module AttackWay =
 module Game =
   let init pl1 pl2 =
     let deckInit plId (pl: Player) =
-      pl.Deck
-      |> Deck.cardList
-      |> List.map (fun card -> (card, plId))
+      T5.zip
+        (NPCardId.all |> T5.map (fun c -> (plId, c)))
+        (pl.Deck.Cards)
+      |> T5.toList
+      |> List.map (fun (cardId, spec) ->
+          let card = Card.init cardId spec
+          in (cardId, card)
+          )
     let initBoard =
       List.append
         (pl1 |> deckInit Player1)
         (pl2 |> deckInit Player2)
-      |> List.map (fun (spec, plId) ->
-          let c = Card.init plId spec
-          in (c.CardId, c)
-          )
       |> Map.ofList
     in
       {
@@ -96,7 +103,7 @@ module Game =
     {
       Board =
         g.Board
-        |> Map.filter (fun _ card -> card.Owner = pl)
+        |> Map.filter (fun _ card -> (card |> Card.owner) = pl)
       Dohyo =
         g.Dohyo
     }

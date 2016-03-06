@@ -2,8 +2,6 @@
 
 [<EntryPoint>]
 let main argv = 
-  let replicate5 x = (x, x, x, x, x)
-
   let makeCard hp atk itl spd =
     {
       Name    = sprintf "{%d: %d/%d (%d)}" hp atk itl spd
@@ -16,7 +14,7 @@ let main argv =
   let makeDeckByReplicate (card: CardSpec) =
     {
       Name    = sprintf "5x%s" (card.Name)
-      Cards   = replicate5 card
+      Cards   = T5.replicate card
     }
 
   let makeStupidPlayer name card =

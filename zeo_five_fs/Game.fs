@@ -59,7 +59,7 @@ module Game =
       if target |> Card.curHp |> flip (<=) 0
       then
         printfn "%s died." (target.Spec.Name)
-        g |> updatePhase (SummonPhase target.Owner)
+        g |> updatePhase (SummonPhase (target |> Card.owner))
       else
         g
 
@@ -105,7 +105,7 @@ module Game =
       g
       |> sortBySpeed
       |> List.map (fun cardId ->
-          (g |> Game.card cardId).Owner
+          g |> Game.card cardId |> Card.owner
           )
     in
       g |> updatePhase (AttackPhase order)
