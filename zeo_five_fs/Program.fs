@@ -32,6 +32,12 @@ type ConsoleBroadcaster() =
           do
             printfn "%s died." (card.Spec.Name)
 
+      | EvGameBegin ->
+          do
+            printfn "-- %s vs %s --"
+              (g |> Game.player Player1).Name
+              (g |> Game.player Player2).Name
+
       | EvGameEnd (Win plId) ->
           let pl = g |> Game.player plId
           do

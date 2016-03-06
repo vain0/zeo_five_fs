@@ -68,6 +68,7 @@ module Types =
     | EvAttack        of PlayerId * AttackWay
     | EvDamage        of CardId * int
     | EvDie           of CardId
+    | EvGameBegin
     | EvGameEnd       of GameResult
 
   type GameState =

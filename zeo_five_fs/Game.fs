@@ -115,6 +115,7 @@ module Game =
 
   let doBeginPhase (g: Game) =
     g
+    |> Game.event EvGameBegin
     |> doSummonPhase Player1
     |> doSummonPhase Player2
     
