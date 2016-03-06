@@ -4,12 +4,12 @@
 let main argv = 
   let replicate5 x = (x, x, x, x, x)
 
-  let makeCard hp atk int' spd =
+  let makeCard hp atk itl spd =
     {
-      Name    = sprintf "{%d: %d/%d (%d)}" hp atk int' spd
+      Name    = sprintf "{%d: %d/%d (%d)}" hp atk itl spd
       Hp      = hp
       Atk     = atk
-      Int     = int'
+      Itl     = itl
       Spd     = spd
     }
 

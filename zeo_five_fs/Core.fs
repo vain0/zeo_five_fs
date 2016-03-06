@@ -32,7 +32,7 @@ module Card =
   let power attackWay (card: Card) =
     match attackWay with
     | PhysicalAttack -> card.Spec.Atk
-    | MagicalAttack  -> card.Spec.Int
+    | MagicalAttack  -> card.Spec.Itl
 
 module Deck =
   let cardList (deck: Deck) =

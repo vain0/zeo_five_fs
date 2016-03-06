@@ -17,7 +17,7 @@ module Types =
       Name    : string
       Hp      : int
       Atk     : int
-      Int     : int
+      Itl     : int  // intelligence
       Spd     : int
     }
 
