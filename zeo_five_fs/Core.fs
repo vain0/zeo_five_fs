@@ -82,6 +82,9 @@ module Game =
     in
       g.Players |> f
 
+  let card cardId (g: Game) =
+    g.Board |> Map.find cardId
+
   /// プレイヤー pl からみた場況
   let state pl (g: Game): GameState =
     {

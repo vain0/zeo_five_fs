@@ -27,7 +27,7 @@ module Game =
   let summonCard pl cardId (g: Game) =
     printfn "Player %A summoned %s."
       (g |> Game.player pl)
-      ((g.Board |> Map.find cardId).Spec.Name)
+      ((g |> Game.card cardId).Spec.Name)
 
     g |> updateBattlefield pl cardId None
 
@@ -50,11 +50,11 @@ module Game =
     let (attackerId, attackWayOpt) =
       g.Battlefield |> Map.find pl
     let attacker =
-      g.Board |> Map.find attackerId
+      g |> Game.card attackerId
     let (targetId, _) =
       g.Battlefield |> Map.find (pl |> Player.inverse)
     let target =
-      g.Board |> Map.find targetId
+      g |> Game.card targetId
     let attackWay =
       attackWayOpt |> Option.get
     let amount =
@@ -112,7 +112,7 @@ module Game =
     |> Map.toList
     |> List.map (fun (_, (cardId, _)) -> cardId)
     |> List.sortBy (fun cardId ->
-        (g.Board |> Map.find cardId).Spec.Spd
+        (g |> Game.card cardId).Spec.Spd
         )
     |> List.rev
 
@@ -121,7 +121,7 @@ module Game =
       g
       |> sortBySpeed
       |> List.map (fun cardId ->
-          (g.Board |> Map.find cardId).Owner
+          (g |> Game.card cardId).Owner
           )
     in
       g |> updatePhase (AttackPhase order)
