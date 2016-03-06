@@ -20,6 +20,9 @@ module T5 =
 module NPCardId =
   let all = (Card1, Card2, Card3, Card4, Card5)
 
+  let indexed =
+    T5.zip (0, 1, 2, 3, 4) all |> T5.toList
+
 module Card =
   let init cardId spec =
     {
