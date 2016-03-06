@@ -70,8 +70,8 @@ module Types =
     }
 
   type IBrain =
-    abstract member Summon: GameState -> CardId
-    abstract member Attack: GameState -> AttackWay
+    abstract member Summon: PlayerId * GameState -> CardId
+    abstract member Attack: PlayerId * GameState -> AttackWay
 
   type Player =
     {

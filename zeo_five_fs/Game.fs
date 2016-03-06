@@ -43,7 +43,7 @@ module Game =
         g |> endWith (pl |> Player.inverse |> Win)
       else
         g 
-        |> summonCard pl (brain.Summon(state))
+        |> summonCard pl (brain.Summon(pl, state))
         |> updatePhase CombatPhase
 
   let dealDamage pl way (g: Game) =
@@ -74,7 +74,7 @@ module Game =
         let brain =
           (g |> Game.player pl).Brain
         in
-          brain.Attack(g |> Game.state pl)
+          brain.Attack(pl, g |> Game.state pl)
     in
       g
       |> dealDamage pl attackWay

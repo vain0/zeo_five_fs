@@ -111,11 +111,11 @@ module Game =
 module Brain =
   type StupidBrain() =
     interface IBrain with
-      member this.Summon(state: GameState) =
+      member this.Summon(_, state: GameState) =
         state.Board
         |> Map.filter (fun _ card -> card |> Card.isAlive)
         |> Map.toList
         |> List.head  // assert that someone is alive
         |> fst
-      member this.Attack(state: GameState) =
+      member this.Attack(_, state: GameState) =
         PhysicalAttack
