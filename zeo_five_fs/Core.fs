@@ -62,7 +62,7 @@ module AttackWay =
     | MagicalAttack  -> PhysicalAttack
 
 module Game =
-  let init pl1 pl2 =
+  let init audience pl1 pl2 =
     let deckInit plId (pl: Player) =
       T5.zip
         (NPCardId.all |> T5.map (fun c -> (plId, c)))
@@ -83,6 +83,7 @@ module Game =
         Board         = initBoard
         Dohyo         = Map.empty
         Phase         = GameBegin
+        Audience      = audience
       }
 
   let player pl (g: Game) =
@@ -110,6 +111,12 @@ module Game =
       Dohyo =
         g.Dohyo
     }
+
+  let event ev (g: Game) =
+    do
+      g.Audience
+      |> List.iter (fun lis -> lis.Listen(g, ev))
+    g
 
 module Brain =
   type StupidBrain() =

@@ -3,6 +3,49 @@
 open System
 open ZeoFive.Core
 
+type ConsoleBroadcaster() =
+  interface IListener with
+    member this.Listen(g, ev) =
+      match ev with
+      | EvSummon cardId ->
+          let card = g |> Game.card cardId
+          let pl   = g |> Game.player (card |> Card.owner)
+          do
+            printfn "Player %s summoned %s."
+              (pl.Name) (card.Spec.Name)
+
+      | EvAttack (pl, way) ->
+          let card = g |> Game.tryDohyoCard pl |> Option.get
+          do
+            printfn "%s'attacks with %A."
+              (card.Spec.Name) way
+
+      | EvDamage (cardId, amount) ->
+          let card      = g |> Game.card cardId
+          let curHp     = card |> Card.curHp
+          do
+            printfn "%s got %d damage. (HP %d -> %d)"
+              (card.Spec.Name) amount curHp (curHp - amount)
+
+      | EvDie cardId ->
+          let card = g.Board |> Map.find cardId
+          do
+            printfn "%s died." (card.Spec.Name)
+
+      | EvGameBegin ->
+          do
+            printfn "-- %s vs %s --"
+              (g |> Game.player Player1).Name
+              (g |> Game.player Player2).Name
+
+      | EvGameEnd (Win plId) ->
+          let pl = g |> Game.player plId
+          do
+            printfn "Player %s wins!!" (pl.Name)
+
+      | EvGameEnd (Draw) ->
+          printfn "Draw."
+
 type ConsoleBrain() =
   interface IBrain with
     member this.Summon(pl, state) =
@@ -64,13 +107,14 @@ let main argv =
   let card2 = makeCard 100 60 40  0
   let pl1   = makeStupidPlayer "50-person" card1
   let pl2   = makeStupidPlayer "164" card2
+  let audience =
+    [
+      ConsoleBroadcaster() :> IListener
+    ]
 
-  match ZeoFive.Game.play pl1 pl2 with
-  | (g, Win plId) ->
-      let pl = g |> Game.player plId
-      in printfn "Player %s wins." (pl.Name)
-  | (_, Draw) ->
-      printfn "Draw."
+  (pl1, pl2)
+  ||> ZeoFive.Game.play audience
+  |> ignore
 
   // exit code
   0

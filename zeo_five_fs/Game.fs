@@ -25,11 +25,9 @@ module Game =
       }
 
   let summonCard pl cardId (g: Game) =
-    printfn "Player %s summoned %s."
-      ((g |> Game.player pl).Name)
-      ((g |> Game.card cardId).Spec.Name)
-
-    g |> updateDohyo pl cardId
+    g
+    |> Game.event (EvSummon cardId)
+    |> updateDohyo pl cardId
 
   let doSummonPhase pl (g: Game) =
     let brain =
@@ -53,13 +51,17 @@ module Game =
     let amount          = atk |> Card.power way
     let damage'         = target.Damage |> (+) amount |> min (target.Spec.Hp)
     let target          = { target with Damage = damage' }
-    let g               = g |> updateCard (target.CardId) target
+    let g =
+        g
+        |> Game.event (EvDamage (target.CardId, amount))
+        |> updateCard (target.CardId) target
     in
       // 死亡判定
       if target |> Card.curHp |> flip (<=) 0
       then
-        printfn "%s died." (target.Spec.Name)
-        g |> updatePhase (SummonPhase (target |> Card.owner))
+        g
+        |> Game.event (EvDie target.CardId)
+        |> updatePhase (SummonPhase (target |> Card.owner))
       else
         g
 
@@ -77,6 +79,7 @@ module Game =
           brain.Attack(pl, g |> Game.state pl)
     in
       g
+      |> Game.event (EvAttack (pl, attackWay))
       |> dealDamage pl attackWay
       |> updateCard
           (attacker.CardId)
@@ -112,13 +115,15 @@ module Game =
 
   let doBeginPhase (g: Game) =
     g
+    |> Game.event EvGameBegin
     |> doSummonPhase Player1
     |> doSummonPhase Player2
     
   let rec doPhase (g: Game) =
     match g.Phase with
     | GameEnd r ->
-        (g, r)
+        let g = g |> Game.event (EvGameEnd r)
+        in (g, r)
     | GameBegin ->
         g |> doBeginPhase |> doPhase
     | SummonPhase pl ->
@@ -128,7 +133,7 @@ module Game =
     | AttackPhase order ->
         g |> doAttackPhase order |> doPhase
 
-  let play pl1 pl2 =
+  let play audience pl1 pl2 =
     (pl1, pl2)
-    ||> Game.init
+    ||> Game.init audience
     |> doPhase
