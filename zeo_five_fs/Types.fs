@@ -63,6 +63,13 @@ module Types =
     | CombatPhase
     | AttackPhase   of PlayerId list
 
+  type Event =
+    | EvSummon        of CardId
+    | EvAttack        of PlayerId * AttackWay
+    | EvDamage        of CardId * int
+    | EvDie           of CardId
+    | EvGameEnd       of GameResult
+
   type GameState =
     {
       Board         : Board
@@ -80,10 +87,21 @@ module Types =
       Brain   : IBrain
     }
 
+  type GameStateFromListener =
+    {
+      Players     : Player * Player
+      Board       : Board
+      Dohyo       : Dohyo
+    }
+
   type Game =
     {
       Players     : Player * Player
       Board       : Board
       Dohyo       : Dohyo
       Phase       : Phase
+      Audience    : IListener list
     }
+
+  and IListener =
+    abstract member Listen: Game * Event -> unit
