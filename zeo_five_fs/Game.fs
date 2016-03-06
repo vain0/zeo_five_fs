@@ -47,24 +47,15 @@ module Game =
         |> updatePhase CombatPhase
 
   let dealDamage pl (g: Game) =
-    let (attackerId, attackWayOpt) =
-      g.Battlefield |> Map.find pl
-    let attacker =
-      g |> Game.card attackerId
-    let (targetId, _) =
-      g.Battlefield |> Map.find (pl |> Player.inverse)
-    let target =
-      g |> Game.card targetId
-    let attackWay =
-      attackWayOpt |> Option.get
-    let amount =
-      attacker |> Card.power attackWay
-    let target =
-      { target 
-          with Damage = target.Damage |> (+) amount |> min (target.Spec.Hp) }
-    let g =
-      { g with
-          Board = g.Board |> Map.add targetId target }
+    let (atkId, wayOpt) = g.Battlefield |> Map.find pl
+    let atk             = g |> Game.card atkId
+    let (targetId, _)   = g.Battlefield |> Map.find (pl |> Player.inverse)
+    let target          = g |> Game.card targetId
+    let way             = wayOpt |> Option.get
+    let amount          = atk |> Card.power way
+    let damage'         = target.Damage |> (+) amount |> min (target.Spec.Hp)
+    let target          = { target with Damage = damage' }
+    let g               = g |> updateCard targetId target
     in
       // 死亡判定
       if target |> Card.curHp |> flip (<=) 0
