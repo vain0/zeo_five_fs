@@ -11,10 +11,10 @@ module Game =
   let endWith r g =
     g |> updatePhase (GameEnd r)
 
-  let updateBattlefield side cardId prev (g: Game) =
+  let updateBattlefield pl cardId prev (g: Game) =
     { g with
         Battlefield =
-          g.Battlefield |> Map.add side (cardId, prev)
+          g.Battlefield |> Map.add pl (cardId, prev)
       }
 
   let updateCard cardId card (g: Game) =
@@ -24,35 +24,35 @@ module Game =
           g.Board |> Map.add cardId card
       }
 
-  let summonCard side cardId (g: Game) =
+  let summonCard pl cardId (g: Game) =
     printfn "Player %A summoned %s."
-      (g |> Game.playerOn side)
+      (g |> Game.player pl)
       ((g.Board |> Map.find cardId).Spec.Name)
 
-    g |> updateBattlefield side cardId None
+    g |> updateBattlefield pl cardId None
 
-  let doSummonPhase side (g: Game) =
+  let doSummonPhase pl (g: Game) =
     let brain =
-      (g |> Game.playerOn side).Brain
+      (g |> Game.player pl).Brain
     let state =
-      g |> Game.state side
+      g |> Game.state pl
     in
       // 全滅判定
       if state.Board |> Map.forall (fun _ -> Card.isDead)
       then
-        g |> endWith (side |> PlayerSide.inverse |> Win)
+        g |> endWith (pl |> Player.inverse |> Win)
       else
         g 
-        |> summonCard side (brain.Summon(state))
+        |> summonCard pl (brain.Summon(state))
         |> updatePhase CombatPhase
 
-  let dealDamage side (g: Game) =
+  let dealDamage pl (g: Game) =
     let (attackerId, attackWayOpt) =
-      g.Battlefield |> Map.find side
+      g.Battlefield |> Map.find pl
     let attacker =
       g.Board |> Map.find attackerId
     let (targetId, _) =
-      g.Battlefield |> Map.find (side |> PlayerSide.inverse)
+      g.Battlefield |> Map.find (pl |> Player.inverse)
     let target =
       g.Board |> Map.find targetId
     let attackWay =
@@ -70,42 +70,42 @@ module Game =
       if target |> Card.curHp |> flip (<=) 0
       then
         printfn "%s died." (target.Spec.Name)
-        g |> updatePhase (SummonPhase (side |> PlayerSide.inverse))
+        g |> updatePhase (SummonPhase target.Owner)
       else
         g
 
-  let selectAttackWay side way (g: Game) =
+  let selectAttackWay pl way (g: Game) =
     let (cardId, _) =
-      g.Battlefield |> Map.find side
+      g.Battlefield |> Map.find pl
     in
-      g |> updateBattlefield side cardId (Some way)
+      g |> updateBattlefield pl cardId (Some way)
 
-  let attack side (g: Game) =
+  let attack pl (g: Game) =
     let (cardId, prev) =
-      assert (g.Battlefield |> Map.containsKey side)
-      g.Battlefield |> Map.find side 
+      assert (g.Battlefield |> Map.containsKey pl)
+      g.Battlefield |> Map.find pl 
     let attackWay =
       match prev with
       | Some prev ->
           prev |> AttackWay.inverse
       | None ->
         let brain =
-          (g |> Game.playerOn side).Brain
+          (g |> Game.player pl).Brain
         in
-          brain.Attack(g |> Game.state side)
+          brain.Attack(g |> Game.state pl)
     in
       g
-      |> selectAttackWay side attackWay
-      |> dealDamage side
+      |> selectAttackWay pl attackWay
+      |> dealDamage pl
 
   let doAttackPhase order (g: Game) =
     match order with
     | [] ->
         g |> updatePhase CombatPhase
-    | side :: rest ->
+    | pl :: rest ->
         g
         |> updatePhase (AttackPhase rest)
-        |> attack side
+        |> attack pl
 
   let sortBySpeed (g: Game) =
     g.Battlefield
@@ -121,15 +121,15 @@ module Game =
       g
       |> sortBySpeed
       |> List.map (fun cardId ->
-          (g.Board |> Map.find cardId).Side
+          (g.Board |> Map.find cardId).Owner
           )
     in
       g |> updatePhase (AttackPhase order)
 
   let doBeginPhase (g: Game) =
     g
-    |> doSummonPhase First
-    |> doSummonPhase Second
+    |> doSummonPhase Player1
+    |> doSummonPhase Player2
     
   let rec doPhase (g: Game) =
     match g.Phase with
@@ -137,8 +137,8 @@ module Game =
         (g, r)
     | GameBegin ->
         g |> doBeginPhase |> doPhase
-    | SummonPhase side ->
-        g |> doSummonPhase side |> doPhase
+    | SummonPhase pl ->
+        g |> doSummonPhase pl |> doPhase
     | CombatPhase ->
         g |> doCombatPhase |> doPhase
     | AttackPhase order ->

@@ -12,11 +12,11 @@ module Misc =
   let flip f x y = f y x
 
 module Card =
-  let init side spec =
+  let init pl spec =
     {
       Spec    = spec
       Damage  = 0
-      Side    = side
+      Owner   = pl
       CardId  = newCardId ()
     }
 
@@ -39,11 +39,11 @@ module Deck =
     let (c0, c1, c2, c3, c4) = deck.Cards
     in [c0; c1; c2; c3; c4]
 
-module PlayerSide =
+module Player =
   let inverse =
     function
-    | First  -> Second
-    | Second -> First
+    | Player1 -> Player2
+    | Player2 -> Player1
 
 module AttackWay =
   let inverse =
@@ -53,16 +53,16 @@ module AttackWay =
 
 module Game =
   let init pl1 pl2 =
-    let deckInit side (pl: Player) =
+    let deckInit plId (pl: Player) =
       pl.Deck
       |> Deck.cardList
-      |> List.map (fun card -> (card, side))
+      |> List.map (fun card -> (card, plId))
     let initBoard =
       List.append
-        (pl1 |> deckInit First )
-        (pl2 |> deckInit Second)
-      |> List.map (fun (spec, side) ->
-          let c = Card.init side spec
+        (pl1 |> deckInit Player1)
+        (pl2 |> deckInit Player2)
+      |> List.map (fun (spec, plId) ->
+          let c = Card.init plId spec
           in (c.CardId, c)
           )
       |> Map.ofList
@@ -74,20 +74,20 @@ module Game =
         Phase         = GameBegin
       }
 
-  let playerOn side (g: Game) =
+  let player pl (g: Game) =
     let f =
-      match side with
-      | First  -> fst
-      | Second -> snd
+      match pl with
+      | Player1 -> fst
+      | Player2 -> snd
     in
       g.Players |> f
 
-  /// side 側からみた場況
-  let state side (g: Game): GameState =
+  /// プレイヤー pl からみた場況
+  let state pl (g: Game): GameState =
     {
       Board =
         g.Board
-        |> Map.filter (fun _ card -> card.Side = side)
+        |> Map.filter (fun _ card -> card.Owner = pl)
       Battlefield =
         g.Battlefield
     }

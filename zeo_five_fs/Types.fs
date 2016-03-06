@@ -8,9 +8,9 @@ module Types =
   type internal T5<'T> =
     'T * 'T * 'T * 'T * 'T
     
-  type PlayerSide =
-    | First
-    | Second
+  type PlayerId =
+    | Player1
+    | Player2
 
   type CardSpec =
     {
@@ -25,7 +25,7 @@ module Types =
     {
       Spec    : CardSpec
       CardId  : CardId
-      Side    : PlayerSide
+      Owner   : PlayerId
       Damage  : int
     }
 
@@ -43,18 +43,18 @@ module Types =
     Map<CardId, Card>
 
   type Battlefield =
-    Map<PlayerSide, (CardId * option<AttackWay>)>
+    Map<PlayerId, (CardId * option<AttackWay>)>
 
   type GameResult =
-    | Win           of PlayerSide
+    | Win           of PlayerId
     | Draw
 
   type Phase =
     | GameBegin
     | GameEnd       of GameResult
-    | SummonPhase   of PlayerSide
+    | SummonPhase   of PlayerId
     | CombatPhase
-    | AttackPhase   of PlayerSide list
+    | AttackPhase   of PlayerId list
 
   type GameState =
     {
