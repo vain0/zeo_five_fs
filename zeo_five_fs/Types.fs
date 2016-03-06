@@ -12,6 +12,10 @@ module Types =
     | Player1
     | Player2
 
+  type AttackWay =
+    | PhysicalAttack
+    | MagicalAttack
+
   type CardSpec =
     {
       Name    : string
@@ -27,6 +31,7 @@ module Types =
       CardId  : CardId
       Owner   : PlayerId
       Damage  : int
+      PrevWay : option<AttackWay>
     }
 
   type Deck =
@@ -35,15 +40,11 @@ module Types =
       Cards   : T5<CardSpec>
     }
 
-  type AttackWay =
-    | PhysicalAttack
-    | MagicalAttack
-
   type Board =
     Map<CardId, Card>
 
   type Dohyo =
-    Map<PlayerId, (CardId * option<AttackWay>)>
+    Map<PlayerId, CardId>
 
   type GameResult =
     | Win           of PlayerId

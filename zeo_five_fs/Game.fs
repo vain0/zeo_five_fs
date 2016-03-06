@@ -11,10 +11,10 @@ module Game =
   let endWith r g =
     g |> updatePhase (GameEnd r)
 
-  let updateDohyo pl cardId prev (g: Game) =
+  let updateDohyo pl cardId (g: Game) =
     { g with
         Dohyo =
-          g.Dohyo |> Map.add pl (cardId, prev)
+          g.Dohyo |> Map.add pl cardId
       }
 
   let updateCard cardId card (g: Game) =
@@ -29,7 +29,7 @@ module Game =
       ((g |> Game.player pl).Name)
       ((g |> Game.card cardId).Spec.Name)
 
-    g |> updateDohyo pl cardId None
+    g |> updateDohyo pl cardId
 
   let doSummonPhase pl (g: Game) =
     let brain =
@@ -46,16 +46,14 @@ module Game =
         |> summonCard pl (brain.Summon(state))
         |> updatePhase CombatPhase
 
-  let dealDamage pl (g: Game) =
-    let (atkId, wayOpt) = g.Dohyo |> Map.find pl
-    let atk             = g |> Game.card atkId
-    let (targetId, _)   = g.Dohyo |> Map.find (pl |> Player.inverse)
-    let target          = g |> Game.card targetId
-    let way             = wayOpt |> Option.get
+  let dealDamage pl way (g: Game) =
+    let plTarget        = pl |> Player.inverse
+    let atk             = g |> Game.tryDohyoCard pl       |> Option.get
+    let target          = g |> Game.tryDohyoCard plTarget |> Option.get
     let amount          = atk |> Card.power way
     let damage'         = target.Damage |> (+) amount |> min (target.Spec.Hp)
     let target          = { target with Damage = damage' }
-    let g               = g |> updateCard targetId target
+    let g               = g |> updateCard (target.CardId) target
     in
       // 死亡判定
       if target |> Card.curHp |> flip (<=) 0
@@ -65,18 +63,11 @@ module Game =
       else
         g
 
-  let selectAttackWay pl way (g: Game) =
-    let (cardId, _) =
-      g.Dohyo |> Map.find pl
-    in
-      g |> updateDohyo pl cardId (Some way)
-
   let attack pl (g: Game) =
-    let (cardId, prev) =
-      assert (g.Dohyo |> Map.containsKey pl)
-      g.Dohyo |> Map.find pl 
+    let attacker =
+      g |> Game.tryDohyoCard pl |> Option.get
     let attackWay =
-      match prev with
+      match attacker.PrevWay with
       | Some prev ->
           prev |> AttackWay.inverse
       | None ->
@@ -86,8 +77,10 @@ module Game =
           brain.Attack(g |> Game.state pl)
     in
       g
-      |> selectAttackWay pl attackWay
-      |> dealDamage pl
+      |> dealDamage pl attackWay
+      |> updateCard
+          (attacker.CardId)
+          { attacker with PrevWay = Some attackWay }
 
   let doAttackPhase order (g: Game) =
     match order with
@@ -101,7 +94,7 @@ module Game =
   let sortBySpeed (g: Game) =
     g.Dohyo
     |> Map.toList
-    |> List.map (fun (_, (cardId, _)) -> cardId)
+    |> List.map snd
     |> List.sortBy (fun cardId ->
         (g |> Game.card cardId).Spec.Spd
         )

@@ -18,6 +18,7 @@ module Card =
       Damage  = 0
       Owner   = pl
       CardId  = newCardId ()
+      PrevWay = None
     }
 
   let curHp (card: Card) =
@@ -84,6 +85,11 @@ module Game =
 
   let card cardId (g: Game) =
     g.Board |> Map.find cardId
+
+  let tryDohyoCard pl (g: Game) =
+    g.Dohyo
+    |> Map.tryFind pl
+    |> Option.map (flip card g)
 
   /// プレイヤー pl からみた場況
   let state pl (g: Game): GameState =
