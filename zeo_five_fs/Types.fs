@@ -42,7 +42,7 @@ module Types =
   type Board =
     Map<CardId, Card>
 
-  type Battlefield =
+  type Dohyo =
     Map<PlayerId, (CardId * option<AttackWay>)>
 
   type GameResult =
@@ -59,7 +59,7 @@ module Types =
   type GameState =
     {
       Board         : Board
-      Battlefield   : Battlefield
+      Dohyo         : Dohyo
     }
 
   type IBrain =
@@ -77,6 +77,6 @@ module Types =
     {
       Players     : Player * Player
       Board       : Board
-      Battlefield : Battlefield
+      Dohyo       : Dohyo
       Phase       : Phase
     }

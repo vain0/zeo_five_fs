@@ -70,7 +70,7 @@ module Game =
       {
         Players       = (pl1, pl2)
         Board         = initBoard
-        Battlefield   = Map.empty
+        Dohyo         = Map.empty
         Phase         = GameBegin
       }
 
@@ -91,8 +91,8 @@ module Game =
       Board =
         g.Board
         |> Map.filter (fun _ card -> card.Owner = pl)
-      Battlefield =
-        g.Battlefield
+      Dohyo =
+        g.Dohyo
     }
 
 module Brain =

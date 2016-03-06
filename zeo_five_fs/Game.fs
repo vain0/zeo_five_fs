@@ -11,10 +11,10 @@ module Game =
   let endWith r g =
     g |> updatePhase (GameEnd r)
 
-  let updateBattlefield pl cardId prev (g: Game) =
+  let updateDohyo pl cardId prev (g: Game) =
     { g with
-        Battlefield =
-          g.Battlefield |> Map.add pl (cardId, prev)
+        Dohyo =
+          g.Dohyo |> Map.add pl (cardId, prev)
       }
 
   let updateCard cardId card (g: Game) =
@@ -29,7 +29,7 @@ module Game =
       ((g |> Game.player pl).Name)
       ((g |> Game.card cardId).Spec.Name)
 
-    g |> updateBattlefield pl cardId None
+    g |> updateDohyo pl cardId None
 
   let doSummonPhase pl (g: Game) =
     let brain =
@@ -47,9 +47,9 @@ module Game =
         |> updatePhase CombatPhase
 
   let dealDamage pl (g: Game) =
-    let (atkId, wayOpt) = g.Battlefield |> Map.find pl
+    let (atkId, wayOpt) = g.Dohyo |> Map.find pl
     let atk             = g |> Game.card atkId
-    let (targetId, _)   = g.Battlefield |> Map.find (pl |> Player.inverse)
+    let (targetId, _)   = g.Dohyo |> Map.find (pl |> Player.inverse)
     let target          = g |> Game.card targetId
     let way             = wayOpt |> Option.get
     let amount          = atk |> Card.power way
@@ -67,14 +67,14 @@ module Game =
 
   let selectAttackWay pl way (g: Game) =
     let (cardId, _) =
-      g.Battlefield |> Map.find pl
+      g.Dohyo |> Map.find pl
     in
-      g |> updateBattlefield pl cardId (Some way)
+      g |> updateDohyo pl cardId (Some way)
 
   let attack pl (g: Game) =
     let (cardId, prev) =
-      assert (g.Battlefield |> Map.containsKey pl)
-      g.Battlefield |> Map.find pl 
+      assert (g.Dohyo |> Map.containsKey pl)
+      g.Dohyo |> Map.find pl 
     let attackWay =
       match prev with
       | Some prev ->
@@ -99,7 +99,7 @@ module Game =
         |> attack pl
 
   let sortBySpeed (g: Game) =
-    g.Battlefield
+    g.Dohyo
     |> Map.toList
     |> List.map (fun (_, (cardId, _)) -> cardId)
     |> List.sortBy (fun cardId ->
