@@ -25,8 +25,8 @@ module Game =
       }
 
   let summonCard pl cardId (g: Game) =
-    printfn "Player %A summoned %s."
-      (g |> Game.player pl)
+    printfn "Player %s summoned %s."
+      ((g |> Game.player pl).Name)
       ((g |> Game.card cardId).Spec.Name)
 
     g |> updateBattlefield pl cardId None
@@ -145,9 +145,6 @@ module Game =
         g |> doAttackPhase order |> doPhase
 
   let play pl1 pl2 =
-    let (g, result) =
-      (pl1, pl2)
-      ||> Game.init
-      |> doPhase
-    in
-      result
+    (pl1, pl2)
+    ||> Game.init
+    |> doPhase

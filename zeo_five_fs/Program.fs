@@ -31,10 +31,12 @@ let main argv =
   let pl1   = makeStupidPlayer "50-person" card1
   let pl2   = makeStupidPlayer "164" card2
 
-  let result =
-    ZeoFive.Game.play pl1 pl2
-
-  printfn "%A" result
+  match ZeoFive.Game.play pl1 pl2 with
+  | (g, Win plId) ->
+      let pl = g |> Game.player plId
+      in printfn "Player %s wins." (pl.Name)
+  | (_, Draw) ->
+      printfn "Draw."
 
   // exit code
   0
