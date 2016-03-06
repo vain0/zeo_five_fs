@@ -15,9 +15,9 @@ module Card =
   let init pl spec =
     {
       Spec    = spec
-      Damage  = 0
       Owner   = pl
       CardId  = newCardId ()
+      Damage  = 0
       PrevWay = None
     }
 
