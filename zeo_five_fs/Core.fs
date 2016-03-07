@@ -82,7 +82,7 @@ module Game =
         Players       = (pl1, pl2)
         Board         = initBoard
         Dohyo         = Map.empty
-        Phase         = GameBegin
+        Phase         = PhGameBegin
         Audience      = audience
       }
 

@@ -9,7 +9,7 @@ module Game =
       }
 
   let endWith r g =
-    g |> updatePhase (GameEnd r)
+    g |> updatePhase (PhGameEnd r)
 
   let updateDohyo pl cardId (g: Game) =
     { g with
@@ -42,7 +42,7 @@ module Game =
       else
         g 
         |> summonCard pl (brain.Summon(pl, state))
-        |> updatePhase CombatPhase
+        |> updatePhase PhCombat
 
   let dealDamage pl way (g: Game) =
     let plTarget        = pl |> Player.inverse
@@ -61,7 +61,7 @@ module Game =
       then
         g
         |> Game.event (EvDie target.CardId)
-        |> updatePhase (SummonPhase (target |> Card.owner))
+        |> updatePhase (PhSummon (target |> Card.owner))
       else
         g
 
@@ -88,10 +88,10 @@ module Game =
   let doAttackPhase order (g: Game) =
     match order with
     | [] ->
-        g |> updatePhase CombatPhase
+        g |> updatePhase PhCombat
     | pl :: rest ->
         g
-        |> updatePhase (AttackPhase rest)
+        |> updatePhase (PhAttack rest)
         |> attack pl
 
   let sortBySpeed (g: Game) =
@@ -111,7 +111,7 @@ module Game =
           g |> Game.card cardId |> Card.owner
           )
     in
-      g |> updatePhase (AttackPhase order)
+      g |> updatePhase (PhAttack order)
 
   let doBeginPhase (g: Game) =
     g
@@ -121,16 +121,16 @@ module Game =
     
   let rec doPhase (g: Game) =
     match g.Phase with
-    | GameEnd r ->
+    | PhGameEnd r ->
         let g = g |> Game.event (EvGameEnd r)
         in (g, r)
-    | GameBegin ->
+    | PhGameBegin ->
         g |> doBeginPhase |> doPhase
-    | SummonPhase pl ->
+    | PhSummon pl ->
         g |> doSummonPhase pl |> doPhase
-    | CombatPhase ->
+    | PhCombat ->
         g |> doCombatPhase |> doPhase
-    | AttackPhase order ->
+    | PhAttack order ->
         g |> doAttackPhase order |> doPhase
 
   let play audience pl1 pl2 =

@@ -57,11 +57,11 @@ module Types =
     | Draw
 
   type Phase =
-    | GameBegin
-    | GameEnd       of GameResult
-    | SummonPhase   of PlayerId
-    | CombatPhase
-    | AttackPhase   of PlayerId list
+    | PhGameBegin
+    | PhGameEnd       of GameResult
+    | PhSummon        of PlayerId
+    | PhCombat
+    | PhAttack        of PlayerId list
 
   type Event =
     | EvSummon        of CardId
