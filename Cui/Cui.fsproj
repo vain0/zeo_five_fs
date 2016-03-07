@@ -47,6 +47,8 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broadcaster.fs" />
+    <Compile Include="Brain.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
