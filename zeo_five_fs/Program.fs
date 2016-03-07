@@ -7,12 +7,21 @@ type ConsoleBroadcaster() =
   interface IListener with
     member this.Listen(g, ev) =
       match ev with
+      | EvSummonSelect pl ->
+          ()
+
       | EvSummon cardId ->
           let card = g |> Game.card cardId
           let pl   = g |> Game.player (card |> Card.owner)
           do
             printfn "Player %s summoned %s."
               (pl.Name) (card.Spec.Name)
+
+      | EvCombat _ ->
+          ()
+
+      | EvAttackSelect pl ->
+          ()
 
       | EvAttack (pl, way) ->
           let card = g |> Game.tryDohyoCard pl |> Option.get

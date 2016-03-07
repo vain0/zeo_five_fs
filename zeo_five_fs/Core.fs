@@ -82,7 +82,7 @@ module Game =
         Players       = (pl1, pl2)
         Board         = initBoard
         Dohyo         = Map.empty
-        Phase         = PhGameBegin
+        Kont          = [EvGameBegin]
         Audience      = audience
       }
 
@@ -112,9 +112,9 @@ module Game =
         g.Dohyo
     }
 
-  let updatePhase phase (g: Game) =
+  let happen ev (g: Game) =
     { g with
-        Phase = phase
+        Kont = ev :: g.Kont
       }
 
   let updateDohyo pl cardId (g: Game) =

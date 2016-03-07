@@ -3,60 +3,10 @@
 open ZeoFive.Core
 
 module Game =
-  let event ev (g: Game) =
-    do
-      g.Audience
-      |> List.iter (fun lis -> lis.Listen(g, ev))
-    g
-    
   let endWith r g =
-    g |> Game.updatePhase (PhGameEnd r)
+    { g with Kont = [EvGameEnd r] }
 
-  let beginCombat g =
-    g |> Game.updatePhase (PhCombat Set.empty)
-
-  let summonCard pl cardId (g: Game) =
-    g
-    |> event (EvSummon cardId)
-    |> Game.updateDohyo pl cardId
-
-  let doSummonPhase pl (g: Game) =
-    let brain =
-      (g |> Game.player pl).Brain
-    let state =
-      g |> Game.state pl
-    in
-      // 全滅判定
-      if state.Board |> Map.forall (fun _ -> Card.isDead)
-      then
-        g |> endWith (pl |> Player.inverse |> Win)
-      else
-        g 
-        |> summonCard pl (brain.Summon(pl, state))
-        |> beginCombat
-
-  let dealDamage pl way (g: Game) =
-    let plTarget        = pl |> Player.inverse
-    let atk             = g |> Game.tryDohyoCard pl       |> Option.get
-    let target          = g |> Game.tryDohyoCard plTarget |> Option.get
-    let amount          = atk |> Card.power way
-    let damage'         = target.Damage |> (+) amount |> min (target.Spec.Hp)
-    let target          = { target with Damage = damage' }
-    let g =
-        g
-        |> event (EvDamage (target.CardId, amount))
-        |> Game.updateCard (target.CardId) target
-    in
-      // 死亡判定
-      if target |> Card.curHp |> flip (<=) 0
-      then
-        g
-        |> event (EvDie target.CardId)
-        |> Game.updatePhase (PhSummon (target |> Card.owner))
-      else
-        g
-
-  let attack pl (g: Game) =
+  let doAttackSelectEvent pl (g: Game) =
     let attacker =
       g |> Game.tryDohyoCard pl |> Option.get
     let attackWay =
@@ -64,17 +14,11 @@ module Game =
       | Some prev ->
           prev |> AttackWay.inverse
       | None ->
-        let brain =
-          (g |> Game.player pl).Brain
+        let brain = (g |> Game.player pl).Brain
         in
           brain.Attack(pl, g |> Game.state pl)
     in
-      g
-      |> event (EvAttack (pl, attackWay))
-      |> dealDamage pl attackWay
-      |> Game.updateCard
-          (attacker.CardId)
-          { attacker with PrevWay = Some attackWay }
+      (g, attackWay)
 
   let nextActor actedPls (g: Game) =
       g.Dohyo
@@ -86,34 +30,95 @@ module Game =
           (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
       |> Option.map fst
 
-  let doCombatPhase actedPls (g: Game) =
-    match g |> nextActor actedPls with
-    | None ->
-        g |> beginCombat
-    | Some actor ->
-        g
-        |> Game.updatePhase (PhCombat (actedPls |> Set.add actor))
-        |> attack actor
+  let doEvent ev (g: Game) =
+      match ev with
+      | EvSummonSelect pl ->
+          let brain = (g |> Game.player pl).Brain
+          let state =  g |> Game.state pl
+          in
+            // 全滅判定
+            if state.Board |> Map.forall (fun _ -> Card.isDead)
+            then
+              g |> endWith (pl |> Player.inverse |> Win)
+            else
+              g |> Game.happen (EvSummon (brain.Summon(pl, state)))
 
-  let doBeginPhase (g: Game) =
-    g
-    |> event EvGameBegin
-    |> doSummonPhase Player1
-    |> doSummonPhase Player2
-    
-  let rec doPhase (g: Game) =
-    match g.Phase with
-    | PhGameEnd r ->
-        let g = g |> event (EvGameEnd r)
-        in (g, r)
-    | PhGameBegin ->
-        g |> doBeginPhase |> doPhase
-    | PhSummon pl ->
-        g |> doSummonPhase pl |> doPhase
-    | PhCombat actedPls ->
-        g |> doCombatPhase actedPls |> doPhase
+      | EvSummon cardId ->
+          g |> Game.updateDohyo (fst cardId) cardId
+
+      | EvCombat actedPls ->
+          match g |> nextActor actedPls with
+          | None ->
+              g |> Game.happen (EvCombat Set.empty)
+          | Some actor ->
+              g
+              |> Game.happen (EvCombat (actedPls |> Set.add actor))
+              |> Game.happen (EvAttackSelect actor)
+
+      | EvAttackSelect pl ->
+          let (g, attackWay) =
+              g |> doAttackSelectEvent pl
+          let attacker =
+              g |> Game.tryDohyoCard pl |> Option.get
+          in
+            g
+            |> Game.updateCard
+                attacker.CardId
+                { attacker with PrevWay = Some attackWay }
+            |> Game.happen (EvAttack (pl, attackWay))
+
+      | EvAttack (pl, attackWay) ->
+          let plTarget  = pl |> Player.inverse
+          let attacker  = g |> Game.tryDohyoCard pl       |> Option.get
+          let target    = g |> Game.tryDohyoCard plTarget |> Option.get
+          let amount    =
+            attacker
+            |> Card.power attackWay
+            |> min (target |> Card.curHp)
+          in
+            g |> Game.happen (EvDamage (target.CardId, amount))
+
+      | EvDamage (cardId, amount) ->
+          let card    = g |> Game.card cardId
+          let card    = { card with Damage = card.Damage + amount }
+          let g       = g |> Game.updateCard cardId card
+          in
+            // 死亡判定
+            if (card |> Card.curHp) <= 0
+            then g |> Game.happen (EvDie cardId)
+            else g
+
+      | EvDie cardId ->
+          { g with Kont = [] }
+          |> Game.happen (EvCombat Set.empty)
+          |> Game.happen (EvSummonSelect (fst cardId))
+
+      | EvGameBegin ->
+          g
+          |> Game.happen (EvCombat Set.empty)
+          |> Game.happen (EvSummonSelect Player2)
+          |> Game.happen (EvSummonSelect Player1)
+
+      | EvGameEnd _ ->
+          g
+
+  let rec doNextEvent (g: Game) =
+    match g.Kont with
+    | [] -> failwith "game stuck"
+    | ev :: kont ->
+        let () =
+          g.Audience
+          |> List.iter (fun lis -> lis.Listen(g, ev))
+        let g =
+          { g with Kont = kont }
+          |> doEvent ev
+        in
+          match ev with
+          | EvGameEnd r -> (g, r)
+          | _ ->
+              g |> doNextEvent
 
   let play audience pl1 pl2 =
     (pl1, pl2)
     ||> Game.init audience
-    |> doPhase
+    |> doNextEvent
