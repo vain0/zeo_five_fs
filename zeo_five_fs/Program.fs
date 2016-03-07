@@ -17,14 +17,14 @@ type ConsoleBroadcaster() =
       | EvAttack (pl, way) ->
           let card = g |> Game.tryDohyoCard pl |> Option.get
           do
-            printfn "%s'attacks with %A."
+            printfn "%s attacked with %A."
               (card.Spec.Name) way
 
       | EvDamage (cardId, amount) ->
           let card      = g |> Game.card cardId
           let curHp     = card |> Card.curHp
           do
-            printfn "%s got %d damage. (HP %d -> %d)"
+            printfn "%s took %d damage. (HP %d -> %d)"
               (card.Spec.Name) amount curHp (curHp - amount)
 
       | EvDie cardId ->
