@@ -3,31 +3,13 @@
 open ZeoFive.Core
 
 module Game =
-  let updatePhase phase (g: Game) =
-    { g with
-        Phase = phase
-      }
-
   let endWith r g =
-    g |> updatePhase (PhGameEnd r)
-
-  let updateDohyo pl cardId (g: Game) =
-    { g with
-        Dohyo =
-          g.Dohyo |> Map.add pl cardId
-      }
-
-  let updateCard cardId card (g: Game) =
-    assert (card.CardId = cardId)
-    { g with
-        Board =
-          g.Board |> Map.add cardId card
-      }
+    g |> Game.updatePhase (PhGameEnd r)
 
   let summonCard pl cardId (g: Game) =
     g
     |> Game.event (EvSummon cardId)
-    |> updateDohyo pl cardId
+    |> Game.updateDohyo pl cardId
 
   let doSummonPhase pl (g: Game) =
     let brain =
@@ -42,7 +24,7 @@ module Game =
       else
         g 
         |> summonCard pl (brain.Summon(pl, state))
-        |> updatePhase PhCombat
+        |> Game.updatePhase PhCombat
 
   let dealDamage pl way (g: Game) =
     let plTarget        = pl |> Player.inverse
@@ -54,14 +36,14 @@ module Game =
     let g =
         g
         |> Game.event (EvDamage (target.CardId, amount))
-        |> updateCard (target.CardId) target
+        |> Game.updateCard (target.CardId) target
     in
       // 死亡判定
       if target |> Card.curHp |> flip (<=) 0
       then
         g
         |> Game.event (EvDie target.CardId)
-        |> updatePhase (PhSummon (target |> Card.owner))
+        |> Game.updatePhase (PhSummon (target |> Card.owner))
       else
         g
 
@@ -81,17 +63,17 @@ module Game =
       g
       |> Game.event (EvAttack (pl, attackWay))
       |> dealDamage pl attackWay
-      |> updateCard
+      |> Game.updateCard
           (attacker.CardId)
           { attacker with PrevWay = Some attackWay }
 
   let doAttackPhase order (g: Game) =
     match order with
     | [] ->
-        g |> updatePhase PhCombat
+        g |> Game.updatePhase PhCombat
     | pl :: rest ->
         g
-        |> updatePhase (PhAttack rest)
+        |> Game.updatePhase (PhAttack rest)
         |> attack pl
 
   let sortBySpeed (g: Game) =
@@ -111,7 +93,7 @@ module Game =
           g |> Game.card cardId |> Card.owner
           )
     in
-      g |> updatePhase (PhAttack order)
+      g |> Game.updatePhase (PhAttack order)
 
   let doBeginPhase (g: Game) =
     g

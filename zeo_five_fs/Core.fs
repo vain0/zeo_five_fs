@@ -117,6 +117,24 @@ module Game =
       g.Audience
       |> List.iter (fun lis -> lis.Listen(g, ev))
     g
+    
+  let updatePhase phase (g: Game) =
+    { g with
+        Phase = phase
+      }
+
+  let updateDohyo pl cardId (g: Game) =
+    { g with
+        Dohyo =
+          g.Dohyo |> Map.add pl cardId
+      }
+
+  let updateCard cardId card (g: Game) =
+    assert (card.CardId = cardId)
+    { g with
+        Board =
+          g.Board |> Map.add cardId card
+      }
 
 module Brain =
   type StupidBrain() =
