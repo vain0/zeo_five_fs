@@ -5,14 +5,23 @@ open ZeoFive.Core
 
 type ConsoleBroadcaster() =
   interface IListener with
-    member this.Listen(g, ev) =
+    member this.Listen(g, g', ev) =
       match ev with
+      | EvSummonSelect pl ->
+          ()
+
       | EvSummon cardId ->
           let card = g |> Game.card cardId
           let pl   = g |> Game.player (card |> Card.owner)
           do
             printfn "Player %s summoned %s."
               (pl.Name) (card.Spec.Name)
+
+      | EvCombat _ ->
+          ()
+
+      | EvAttackSelect pl ->
+          ()
 
       | EvAttack (pl, way) ->
           let card = g |> Game.tryDohyoCard pl |> Option.get
@@ -21,11 +30,14 @@ type ConsoleBroadcaster() =
               (card.Spec.Name) way
 
       | EvDamage (cardId, amount) ->
-          let card      = g |> Game.card cardId
-          let curHp     = card |> Card.curHp
+          let card  = g  |> Game.card cardId
+          let card' = g' |> Game.card cardId
           do
             printfn "%s took %d damage. (HP %d -> %d)"
-              (card.Spec.Name) amount curHp (curHp - amount)
+              (card.Spec.Name)
+              amount
+              (card  |> Card.curHp)
+              (card' |> Card.curHp)
 
       | EvDie cardId ->
           let card = g.Board |> Map.find cardId

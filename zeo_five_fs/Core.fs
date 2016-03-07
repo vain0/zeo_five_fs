@@ -82,7 +82,7 @@ module Game =
         Players       = (pl1, pl2)
         Board         = initBoard
         Dohyo         = Map.empty
-        Phase         = PhGameBegin
+        Kont          = [EvGameBegin]
         Audience      = audience
       }
 
@@ -112,16 +112,13 @@ module Game =
         g.Dohyo
     }
 
-  let event ev (g: Game) =
-    do
-      g.Audience
-      |> List.iter (fun lis -> lis.Listen(g, ev))
-    g
-    
-  let updatePhase phase (g: Game) =
+  let happen ev (g: Game) =
     { g with
-        Phase = phase
+        Kont = ev :: g.Kont
       }
+
+  let endWith r g =
+    { g with Kont = [EvGameEnd r] }
 
   let updateDohyo pl cardId (g: Game) =
     { g with
@@ -135,7 +132,7 @@ module Game =
         Board =
           g.Board |> Map.add cardId card
       }
-
+      
 module Brain =
   type StupidBrain() =
     interface IBrain with

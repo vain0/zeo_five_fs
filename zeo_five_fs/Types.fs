@@ -63,7 +63,10 @@ module Types =
     | PhCombat        of Set<PlayerId>
 
   type Event =
+    | EvSummonSelect  of PlayerId
     | EvSummon        of CardId
+    | EvCombat        of Set<PlayerId>
+    | EvAttackSelect  of PlayerId
     | EvAttack        of PlayerId * AttackWay
     | EvDamage        of CardId * int
     | EvDie           of CardId
@@ -99,9 +102,9 @@ module Types =
       Players     : Player * Player
       Board       : Board
       Dohyo       : Dohyo
-      Phase       : Phase
+      Kont        : Event list
       Audience    : IListener list
     }
 
   and IListener =
-    abstract member Listen: Game * Event -> unit
+    abstract member Listen: Game * Game * Event -> unit
