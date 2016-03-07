@@ -107,4 +107,4 @@ module Types =
     }
 
   and IListener =
-    abstract member Listen: Game * Event -> unit
+    abstract member Listen: Game * Game * Event -> unit

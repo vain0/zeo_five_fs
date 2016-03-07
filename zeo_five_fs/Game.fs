@@ -106,17 +106,17 @@ module Game =
     match g.Kont with
     | [] -> failwith "game stuck"
     | ev :: kont ->
-        let () =
-          g.Audience
-          |> List.iter (fun lis -> lis.Listen(g, ev))
-        let g =
+        let g' =
           { g with Kont = kont }
           |> doEvent ev
+        let () =
+          g.Audience
+          |> List.iter (fun lis -> lis.Listen(g, g', ev))
         in
           match ev with
-          | EvGameEnd r -> (g, r)
+          | EvGameEnd r -> (g', r)
           | _ ->
-              g |> doNextEvent
+              g' |> doNextEvent
 
   let play audience pl1 pl2 =
     (pl1, pl2)
