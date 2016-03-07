@@ -6,6 +6,9 @@ module Game =
   let endWith r g =
     g |> Game.updatePhase (PhGameEnd r)
 
+  let beginCombat g =
+    g |> Game.updatePhase (PhCombat Set.empty)
+
   let summonCard pl cardId (g: Game) =
     g
     |> Game.event (EvSummon cardId)
@@ -24,7 +27,7 @@ module Game =
       else
         g 
         |> summonCard pl (brain.Summon(pl, state))
-        |> Game.updatePhase PhCombat
+        |> beginCombat
 
   let dealDamage pl way (g: Game) =
     let plTarget        = pl |> Player.inverse
@@ -67,33 +70,24 @@ module Game =
           (attacker.CardId)
           { attacker with PrevWay = Some attackWay }
 
-  let doAttackPhase order (g: Game) =
-    match order with
-    | [] ->
-        g |> Game.updatePhase PhCombat
-    | pl :: rest ->
-        g
-        |> Game.updatePhase (PhAttack rest)
-        |> attack pl
-
-  let sortBySpeed (g: Game) =
-    g.Dohyo
-    |> Map.toList
-    |> List.map snd
-    |> List.sortBy (fun cardId ->
-        (g |> Game.card cardId).Spec.Spd
-        )
-    |> List.rev
-
-  let doCombatPhase (g: Game) =
-    let order =
-      g
-      |> sortBySpeed
-      |> List.map (fun cardId ->
-          g |> Game.card cardId |> Card.owner
+  let nextActor actedPls (g: Game) =
+      g.Dohyo
+      |> Map.toList
+      |> List.filter (fun (pl, _) ->
+          actedPls |> Set.contains pl |> not
           )
-    in
-      g |> Game.updatePhase (PhAttack order)
+      |> List.tryMaxBy
+          (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
+      |> Option.map fst
+
+  let doCombatPhase actedPls (g: Game) =
+    match g |> nextActor actedPls with
+    | None ->
+        g |> beginCombat
+    | Some actor ->
+        g
+        |> Game.updatePhase (PhCombat (actedPls |> Set.add actor))
+        |> attack actor
 
   let doBeginPhase (g: Game) =
     g
@@ -110,10 +104,8 @@ module Game =
         g |> doBeginPhase |> doPhase
     | PhSummon pl ->
         g |> doSummonPhase pl |> doPhase
-    | PhCombat ->
-        g |> doCombatPhase |> doPhase
-    | PhAttack order ->
-        g |> doAttackPhase order |> doPhase
+    | PhCombat actedPls ->
+        g |> doCombatPhase actedPls |> doPhase
 
   let play audience pl1 pl2 =
     (pl1, pl2)

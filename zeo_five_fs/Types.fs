@@ -60,8 +60,7 @@ module Types =
     | PhGameBegin
     | PhGameEnd       of GameResult
     | PhSummon        of PlayerId
-    | PhCombat
-    | PhAttack        of PlayerId list
+    | PhCombat        of Set<PlayerId>
 
   type Event =
     | EvSummon        of CardId
