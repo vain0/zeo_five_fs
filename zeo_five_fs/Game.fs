@@ -13,6 +13,25 @@ module Game =
         g |> Game.endWith (pl |> Player.inverse |> Win)
       else
         g |> Game.happen (EvSummon (brain.Summon(pl, state)))
+        
+  let nextActor actedPls (g: Game) =
+      g.Dohyo
+      |> Map.toList
+      |> List.filter (fun (pl, _) ->
+          actedPls |> Set.contains pl |> not
+          )
+      |> List.tryMaxBy
+          (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
+      |> Option.map fst
+
+  let doCombatEvent actedPls g =
+    match g |> nextActor actedPls with
+    | None ->
+        g |> Game.happen (EvCombat Set.empty)
+    | Some actor ->
+        g
+        |> Game.happen (EvCombat (actedPls |> Set.add actor))
+        |> Game.happen (EvAttackSelect actor)
 
   let attackSelect pl (g: Game) =
     let attacker =
@@ -40,16 +59,6 @@ module Game =
           { attacker with PrevWay = Some attackWay }
       |> Game.happen (EvAttack (pl, attackWay))
 
-  let nextActor actedPls (g: Game) =
-      g.Dohyo
-      |> Map.toList
-      |> List.filter (fun (pl, _) ->
-          actedPls |> Set.contains pl |> not
-          )
-      |> List.tryMaxBy
-          (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
-      |> Option.map fst
-
   let doEvent ev (g: Game) =
       match ev with
       | EvSummonSelect pl ->
@@ -59,13 +68,7 @@ module Game =
           g |> Game.updateDohyo (fst cardId) cardId
 
       | EvCombat actedPls ->
-          match g |> nextActor actedPls with
-          | None ->
-              g |> Game.happen (EvCombat Set.empty)
-          | Some actor ->
-              g
-              |> Game.happen (EvCombat (actedPls |> Set.add actor))
-              |> Game.happen (EvAttackSelect actor)
+          g |> doCombatEvent actedPls
 
       | EvAttackSelect pl ->
           g |> doAttackSelectEvent pl
