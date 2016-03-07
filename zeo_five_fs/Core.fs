@@ -112,12 +112,6 @@ module Game =
         g.Dohyo
     }
 
-  let event ev (g: Game) =
-    do
-      g.Audience
-      |> List.iter (fun lis -> lis.Listen(g, ev))
-    g
-    
   let updatePhase phase (g: Game) =
     { g with
         Phase = phase

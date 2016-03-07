@@ -3,6 +3,12 @@
 open ZeoFive.Core
 
 module Game =
+  let event ev (g: Game) =
+    do
+      g.Audience
+      |> List.iter (fun lis -> lis.Listen(g, ev))
+    g
+    
   let endWith r g =
     g |> Game.updatePhase (PhGameEnd r)
 
@@ -11,7 +17,7 @@ module Game =
 
   let summonCard pl cardId (g: Game) =
     g
-    |> Game.event (EvSummon cardId)
+    |> event (EvSummon cardId)
     |> Game.updateDohyo pl cardId
 
   let doSummonPhase pl (g: Game) =
@@ -38,14 +44,14 @@ module Game =
     let target          = { target with Damage = damage' }
     let g =
         g
-        |> Game.event (EvDamage (target.CardId, amount))
+        |> event (EvDamage (target.CardId, amount))
         |> Game.updateCard (target.CardId) target
     in
       // 死亡判定
       if target |> Card.curHp |> flip (<=) 0
       then
         g
-        |> Game.event (EvDie target.CardId)
+        |> event (EvDie target.CardId)
         |> Game.updatePhase (PhSummon (target |> Card.owner))
       else
         g
@@ -64,7 +70,7 @@ module Game =
           brain.Attack(pl, g |> Game.state pl)
     in
       g
-      |> Game.event (EvAttack (pl, attackWay))
+      |> event (EvAttack (pl, attackWay))
       |> dealDamage pl attackWay
       |> Game.updateCard
           (attacker.CardId)
@@ -91,14 +97,14 @@ module Game =
 
   let doBeginPhase (g: Game) =
     g
-    |> Game.event EvGameBegin
+    |> event EvGameBegin
     |> doSummonPhase Player1
     |> doSummonPhase Player2
     
   let rec doPhase (g: Game) =
     match g.Phase with
     | PhGameEnd r ->
-        let g = g |> Game.event (EvGameEnd r)
+        let g = g |> event (EvGameEnd r)
         in (g, r)
     | PhGameBegin ->
         g |> doBeginPhase |> doPhase
