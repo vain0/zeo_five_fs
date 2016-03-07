@@ -53,8 +53,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\zeo_five_fs\zeo_five_fs.fsproj">
-      <Name>zeo_five_fs</Name>
+    <ProjectReference Include="..\ZeoFive\ZeoFive.fsproj">
+      <Name>ZeoFive</Name>
       <Project>{abff00ba-7437-4c73-ae61-7c32d41c014b}</Project>
       <Private>True</Private>
     </ProjectReference>

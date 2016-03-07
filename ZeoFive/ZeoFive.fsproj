@@ -8,11 +8,11 @@
     <ProjectGuid>abff00ba-7437-4c73-ae61-7c32d41c014b</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>zeo_five_fs</RootNamespace>
-    <AssemblyName>zeo_five_fs</AssemblyName>
+    <AssemblyName>ZeoFive</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>zeo_five_fs</Name>
+    <Name>ZeoFive</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
