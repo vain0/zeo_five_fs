@@ -3,9 +3,6 @@
 open ZeoFive.Core
 
 module Game =
-  let endWith r g =
-    { g with Kont = [EvGameEnd r] }
-
   let doAttackSelectEvent pl (g: Game) =
     let attacker =
       g |> Game.tryDohyoCard pl |> Option.get
@@ -39,7 +36,7 @@ module Game =
             // 全滅判定
             if state.Board |> Map.forall (fun _ -> Card.isDead)
             then
-              g |> endWith (pl |> Player.inverse |> Win)
+              g |> Game.endWith (pl |> Player.inverse |> Win)
             else
               g |> Game.happen (EvSummon (brain.Summon(pl, state)))
 

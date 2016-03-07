@@ -117,6 +117,9 @@ module Game =
         Kont = ev :: g.Kont
       }
 
+  let endWith r g =
+    { g with Kont = [EvGameEnd r] }
+
   let updateDohyo pl cardId (g: Game) =
     { g with
         Dohyo =
@@ -129,7 +132,7 @@ module Game =
         Board =
           g.Board |> Map.add cardId card
       }
-
+      
 module Brain =
   type StupidBrain() =
     interface IBrain with
