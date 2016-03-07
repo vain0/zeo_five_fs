@@ -2,9 +2,6 @@
 
 [<AutoOpen>]
 module Types =
-  type internal T5<'T> =
-    'T * 'T * 'T * 'T * 'T
-    
   type PlayerId =
     | Player1
     | Player2
