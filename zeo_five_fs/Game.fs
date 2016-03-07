@@ -14,7 +14,7 @@ module Game =
       else
         g |> Game.happen (EvSummon (brain.Summon(pl, state)))
 
-  let doAttackSelectEvent pl (g: Game) =
+  let attackSelect pl (g: Game) =
     let attacker =
       g |> Game.tryDohyoCard pl |> Option.get
     let attackWay =
@@ -27,6 +27,18 @@ module Game =
           brain.Attack(pl, g |> Game.state pl)
     in
       (g, attackWay)
+
+  let doAttackSelectEvent pl g =
+    let (g, attackWay) =
+        g |> attackSelect pl
+    let attacker =
+        g |> Game.tryDohyoCard pl |> Option.get
+    in
+      g
+      |> Game.updateCard
+          attacker.CardId
+          { attacker with PrevWay = Some attackWay }
+      |> Game.happen (EvAttack (pl, attackWay))
 
   let nextActor actedPls (g: Game) =
       g.Dohyo
@@ -56,16 +68,7 @@ module Game =
               |> Game.happen (EvAttackSelect actor)
 
       | EvAttackSelect pl ->
-          let (g, attackWay) =
-              g |> doAttackSelectEvent pl
-          let attacker =
-              g |> Game.tryDohyoCard pl |> Option.get
-          in
-            g
-            |> Game.updateCard
-                attacker.CardId
-                { attacker with PrevWay = Some attackWay }
-            |> Game.happen (EvAttack (pl, attackWay))
+          g |> doAttackSelectEvent pl
 
       | EvAttack (pl, attackWay) ->
           let plTarget  = pl |> Player.inverse
