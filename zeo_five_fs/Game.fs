@@ -59,6 +59,16 @@ module Game =
           { attacker with PrevWay = Some attackWay }
       |> Game.happen (EvAttack (pl, attackWay))
 
+  let doDamageEvent (cardId, amount) g =
+    let card    = g |> Game.card cardId
+    let card    = { card with Damage = card.Damage + amount }
+    let g       = g |> Game.updateCard cardId card
+    in
+      // 死亡判定
+      if (card |> Card.curHp) <= 0
+      then g |> Game.happen (EvDie cardId)
+      else g
+
   let doEvent ev (g: Game) =
       match ev with
       | EvSummonSelect pl ->
@@ -85,14 +95,7 @@ module Game =
             g |> Game.happen (EvDamage (target.CardId, amount))
 
       | EvDamage (cardId, amount) ->
-          let card    = g |> Game.card cardId
-          let card    = { card with Damage = card.Damage + amount }
-          let g       = g |> Game.updateCard cardId card
-          in
-            // 死亡判定
-            if (card |> Card.curHp) <= 0
-            then g |> Game.happen (EvDie cardId)
-            else g
+          g |> doDamageEvent (cardId, amount)
 
       | EvDie cardId ->
           { g with Kont = [] }
