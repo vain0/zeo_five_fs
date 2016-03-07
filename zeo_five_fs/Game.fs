@@ -59,6 +59,17 @@ module Game =
           { attacker with PrevWay = Some attackWay }
       |> Game.happen (EvAttack (pl, attackWay))
 
+  let doAttackEvent (pl, attackWay) g =
+    let plTarget  = pl |> Player.inverse
+    let attacker  = g |> Game.tryDohyoCard pl       |> Option.get
+    let target    = g |> Game.tryDohyoCard plTarget |> Option.get
+    let amount    =
+      attacker
+      |> Card.power attackWay
+      |> min (target |> Card.curHp)
+    in
+      g |> Game.happen (EvDamage (target.CardId, amount))
+
   let doDamageEvent (cardId, amount) g =
     let card    = g |> Game.card cardId
     let card    = { card with Damage = card.Damage + amount }
@@ -84,15 +95,7 @@ module Game =
           g |> doAttackSelectEvent pl
 
       | EvAttack (pl, attackWay) ->
-          let plTarget  = pl |> Player.inverse
-          let attacker  = g |> Game.tryDohyoCard pl       |> Option.get
-          let target    = g |> Game.tryDohyoCard plTarget |> Option.get
-          let amount    =
-            attacker
-            |> Card.power attackWay
-            |> min (target |> Card.curHp)
-          in
-            g |> Game.happen (EvDamage (target.CardId, amount))
+          g |> doAttackEvent (pl, attackWay)
 
       | EvDamage (cardId, amount) ->
           g |> doDamageEvent (cardId, amount)
