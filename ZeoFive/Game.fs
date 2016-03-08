@@ -115,23 +115,26 @@ module Game =
       | EvGameEnd _ ->
           g
 
-  let rec doNextEvent (g: Game) =
-    match g.Kont with
-    | [] -> failwith "game stuck"
-    | ev :: kont ->
-        let g' =
-          { g with Kont = kont }
-          |> doEvent ev
-        let () =
-          g.Audience
-          |> List.iter (fun lis -> lis.Listen(g, g', ev))
-        in
-          match ev with
-          | EvGameEnd r -> (g', r)
-          | _ ->
-              g' |> doNextEvent
+  let rec doNextEvent audience (g: Game) =
+    let rec loop g =
+      match g.Kont with
+      | [] -> failwith "game stuck"
+      | ev :: kont ->
+          let g' =
+            { g with Kont = kont }
+            |> doEvent ev
+          let () =
+            audience
+            |> List.iter (fun (lis: IListener) -> lis.Listen(g, g', ev))
+          in
+            match ev with
+            | EvGameEnd r -> (g', r)
+            | _ ->
+                g' |> loop
+    in
+      loop g
 
   let play audience pl1 pl2 =
     (pl1, pl2)
-    ||> Game.init audience
-    |> doNextEvent
+    ||> Game.init
+    |> doNextEvent audience

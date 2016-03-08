@@ -65,7 +65,7 @@ module AttackWay =
     | MagicalAttack  -> PhysicalAttack
 
 module Game =
-  let init audience ent1 ent2 =
+  let init ent1 ent2 =
     let deckInit plId (ent: Entrant) =
       T5.zip
         (NPCardId.all |> T5.map (fun c -> (plId, c)))
@@ -91,7 +91,6 @@ module Game =
         PlayerStore   = initPlayerStore
         CardStore     = initCardStore
         Kont          = [EvGameBegin]
-        Audience      = audience
       }
 
   let player pl (g: Game) =

@@ -92,10 +92,9 @@ module Types =
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
       Kont        : Event list
-      Audience    : IListener list
     }
 
-  and IListener =
+  type IListener =
     abstract member Listen: Game * Game * Event -> unit
 
   type Entrant =
