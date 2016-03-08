@@ -74,13 +74,6 @@ module Types =
     abstract member Summon: PlayerId * GameState -> CardId
     abstract member Attack: PlayerId * GameState -> AttackWay
 
-  type Entrant =
-    {
-      Name    : string
-      Deck    : Deck
-      Brain   : IBrain
-    }
-
   type Player =
     {
       Name        : string
@@ -105,3 +98,10 @@ module Types =
 
   and IListener =
     abstract member Listen: Game * Game * Event -> unit
+
+  type Entrant =
+    {
+      Name    : string
+      Deck    : Deck
+      Brain   : IBrain
+    }
