@@ -39,7 +39,7 @@ type ConsoleBroadcaster() =
               (card' |> Card.curHp)
 
       | EvDie cardId ->
-          let card = g.Board |> Map.find cardId
+          let card = g |> Game.card cardId
           do
             printfn "%s died." (card.Spec.Name)
 

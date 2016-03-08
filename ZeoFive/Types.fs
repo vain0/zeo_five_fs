@@ -43,12 +43,6 @@ module Types =
       Cards   : T5<CardSpec>
     }
 
-  type Board =
-    Map<CardId, Card>
-
-  type Dohyo =
-    Map<PlayerId, CardId>
-
   type GameResult =
     | Win           of PlayerId
     | Draw
@@ -64,38 +58,48 @@ module Types =
     | EvGameBegin
     | EvGameEnd       of GameResult
 
-  type GameState =
+  /// 相手プレイヤーからみたプレイヤーの状態
+  and PlayerExterior =
     {
-      Board         : Board
-      Dohyo         : Dohyo
+      PlayerId    : PlayerId
+      Name        : string
+      HandCount   : int
+      Dohyo       : option<CardId>
     }
 
   type IBrain =
-    abstract member Summon: PlayerId * GameState -> CardId
-    abstract member Attack: PlayerId * GameState -> AttackWay
+    abstract member Summon: GameStateFromPlayer -> CardId
+    abstract member Attack: GameStateFromPlayer -> AttackWay
 
-  type Player =
+  and Player =
+    {
+      PlayerId    : PlayerId
+      Name        : string
+      Brain       : IBrain
+      Hand        : list<CardId>
+      Dohyo       : option<CardId>
+    }
+
+  and GameStateFromPlayer =
+    {
+      Player      : Player
+      Opponent    : PlayerExterior
+      CardStore   : Map<CardId, Card>
+    }
+
+  type Game =
+    {
+      PlayerStore : Map<PlayerId, Player>
+      CardStore   : Map<CardId, Card>
+      Kont        : Event list
+    }
+
+  type IListener =
+    abstract member Listen: Game * Game * Event -> unit
+
+  type Entrant =
     {
       Name    : string
       Deck    : Deck
       Brain   : IBrain
     }
-
-  type GameStateFromListener =
-    {
-      Players     : Player * Player
-      Board       : Board
-      Dohyo       : Dohyo
-    }
-
-  type Game =
-    {
-      Players     : Player * Player
-      Board       : Board
-      Dohyo       : Dohyo
-      Kont        : Event list
-      Audience    : IListener list
-    }
-
-  and IListener =
-    abstract member Listen: Game * Game * Event -> unit

@@ -4,27 +4,31 @@ open ZeoFive.Core
 
 module Game =
   let doSummonSelectEvent pl (g: Game) =
-    let brain = (g |> Game.player pl).Brain
-    let state =  g |> Game.state pl
-    in
-      // 全滅判定
-      if state.Board |> Map.forall (fun _ -> Card.isDead)
-      then
-        g |> Game.endWith (pl |> Player.inverse |> Win)
-      else
-        g |> Game.happen (EvSummon (brain.Summon(pl, state)))
+    // 全滅判定
+    if (g |> Game.player pl).Hand |> List.isEmpty
+    then
+      g |> Game.endWith (pl |> Player.inverse |> Win)
+    else
+      let brain     = (g |> Game.player pl).Brain
+      let state     =  g |> Game.state pl
+      let cardId    = brain.Summon(state)
+      in
+        assert (g |> Game.card cardId |> Card.owner |> (=) pl)
+      ; g |> Game.happen (EvSummon (cardId))
         
   let nextActor actedPls (g: Game) =
-      g.Dohyo
-      |> Map.toList
+      g
+      |> Game.dohyoCards
+      |> Set.toList
       |> List.filter (fun (pl, _) ->
           actedPls |> Set.contains pl |> not
           )
       |> List.tryMaxBy
-          (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
+          (fun cardId -> (g |> Game.card cardId).Spec.Spd)
       |> Option.map fst
 
   let doCombatEvent actedPls g =
+    assert (g |> Game.dohyoCards |> Set.count |> (=) 2)
     match g |> nextActor actedPls with
     | None ->
         g |> Game.happen (EvCombat Set.empty)
@@ -43,7 +47,7 @@ module Game =
       | None ->
         let brain = (g |> Game.player pl).Brain
         in
-          brain.Attack(pl, g |> Game.state pl)
+          brain.Attack(g |> Game.state pl)
     in
       (g, attackWay)
 
@@ -86,7 +90,9 @@ module Game =
           g |> doSummonSelectEvent pl
 
       | EvSummon cardId ->
-          g |> Game.updateDohyo (fst cardId) cardId
+          g
+          |> Game.updateDohyo (fst cardId) cardId
+          |> Game.updateHand (fst cardId) (List.filter ((<>) cardId))
 
       | EvCombat actedPls ->
           g |> doCombatEvent actedPls
@@ -114,23 +120,26 @@ module Game =
       | EvGameEnd _ ->
           g
 
-  let rec doNextEvent (g: Game) =
-    match g.Kont with
-    | [] -> failwith "game stuck"
-    | ev :: kont ->
-        let g' =
-          { g with Kont = kont }
-          |> doEvent ev
-        let () =
-          g.Audience
-          |> List.iter (fun lis -> lis.Listen(g, g', ev))
-        in
-          match ev with
-          | EvGameEnd r -> (g', r)
-          | _ ->
-              g' |> doNextEvent
+  let rec doNextEvent audience (g: Game) =
+    let rec loop g =
+      match g.Kont with
+      | [] -> failwith "game stuck"
+      | ev :: kont ->
+          let g' =
+            { g with Kont = kont }
+            |> doEvent ev
+          let () =
+            audience
+            |> List.iter (fun (lis: IListener) -> lis.Listen(g, g', ev))
+          in
+            match ev with
+            | EvGameEnd r -> (g', r)
+            | _ ->
+                g' |> loop
+    in
+      loop g
 
   let play audience pl1 pl2 =
     (pl1, pl2)
-    ||> Game.init audience
-    |> doNextEvent
+    ||> Game.init
+    |> doNextEvent audience

@@ -38,6 +38,26 @@ module Player =
     | Player1 -> Player2
     | Player2 -> Player1
 
+  let init plId (entrant: Entrant): Player =
+    {
+      PlayerId      = plId
+      Name          = entrant.Name
+      Brain         = entrant.Brain
+      Hand =
+        NPCardId.all
+        |> T5.map (fun cId -> (plId, cId))
+        |> T5.toList
+      Dohyo         = None
+    }
+
+  let exterior (self: Player) =
+    {
+      PlayerId      = self.PlayerId
+      Name          = self.Name
+      HandCount     = self.Hand |> List.length
+      Dohyo         = self.Dohyo
+    }
+
 module AttackWay =
   let inverse =
     function
@@ -45,54 +65,67 @@ module AttackWay =
     | MagicalAttack  -> PhysicalAttack
 
 module Game =
-  let init audience pl1 pl2 =
-    let deckInit plId (pl: Player) =
+  let init ent1 ent2 =
+    let deckInit plId (ent: Entrant) =
       T5.zip
         (NPCardId.all |> T5.map (fun c -> (plId, c)))
-        (pl.Deck.Cards)
+        (ent.Deck.Cards)
       |> T5.toList
       |> List.map (fun (cardId, spec) ->
           let card = Card.init cardId spec
           in (cardId, card)
           )
-    let initBoard =
+    let initCardStore =
       List.append
-        (pl1 |> deckInit Player1)
-        (pl2 |> deckInit Player2)
+        (ent1 |> deckInit Player1)
+        (ent2 |> deckInit Player2)
+      |> Map.ofList
+    let initPlayerStore =
+      [
+        (Player1, Player.init Player1 ent1)
+        (Player2, Player.init Player2 ent2)
+      ]
       |> Map.ofList
     in
       {
-        Players       = (pl1, pl2)
-        Board         = initBoard
-        Dohyo         = Map.empty
+        PlayerStore   = initPlayerStore
+        CardStore     = initCardStore
         Kont          = [EvGameBegin]
-        Audience      = audience
       }
 
   let player pl (g: Game) =
-    let f =
-      match pl with
-      | Player1 -> fst
-      | Player2 -> snd
-    in
-      g.Players |> f
+    g.PlayerStore |> Map.find pl
 
   let card cardId (g: Game) =
-    g.Board |> Map.find cardId
+    g.CardStore |> Map.find cardId
 
   let tryDohyoCard pl (g: Game) =
-    g.Dohyo
-    |> Map.tryFind pl
-    |> Option.map (flip card g)
+    (g |> player pl).Dohyo
+    |> Option.map (fun cardId -> g |> card cardId)
+
+  let dohyoCards (g: Game) =
+    g.PlayerStore
+    |> Map.toList
+    |> List.choose (fun (_, player) -> player.Dohyo)
+    |> Set.ofList
+
+  /// プレイヤーにカードが見えているか？
+  let isRevealedTo pl cardId (g: Game) =
+    [
+      (g |> card cardId |> Card.owner = pl)
+      (g |> dohyoCards |> Set.contains cardId)
+    ] |> List.exists id
 
   /// プレイヤー pl からみた場況
-  let state pl (g: Game): GameState =
+  let state pl (g: Game): GameStateFromPlayer =
     {
-      Board =
-        g.Board
-        |> Map.filter (fun _ card -> (card |> Card.owner) = pl)
-      Dohyo =
-        g.Dohyo
+      Player =
+        g |> player pl
+      Opponent =
+        g |> player (pl |> Player.inverse) |> Player.exterior
+      CardStore =
+        g.CardStore
+        |> Map.filter (fun _ card -> g |> isRevealedTo pl (card.CardId))
     }
 
   let happen ev (g: Game) =
@@ -103,27 +136,36 @@ module Game =
   let endWith r g =
     { g with Kont = [EvGameEnd r] }
 
-  let updateDohyo pl cardId (g: Game) =
+  let updatePlayer pl player (g: Game) =
     { g with
-        Dohyo =
-          g.Dohyo |> Map.add pl cardId
+        PlayerStore = g.PlayerStore |> Map.add pl player
       }
+
+  let updateDohyo pl cardId (g: Game) =
+    let player =
+      { (g |> player pl) with Dohyo = Some cardId }
+    in
+      g |> updatePlayer pl player
+
+  let updateHand pl f (g: Game) =
+    let player = g |> player pl
+    let player = { player with Hand = (player.Hand |> f) }
+    in
+      g |> updatePlayer pl player
 
   let updateCard cardId card (g: Game) =
     assert (card.CardId = cardId)
     { g with
-        Board =
-          g.Board |> Map.add cardId card
+        CardStore =
+          g.CardStore |> Map.add cardId card
       }
-      
+
 module Brain =
   type StupidBrain() =
     interface IBrain with
-      member this.Summon(_, state: GameState) =
-        state.Board
-        |> Map.filter (fun _ card -> card |> Card.isAlive)
-        |> Map.toList
-        |> List.head  // assert that someone is alive
-        |> fst
-      member this.Attack(_, state: GameState) =
+      member this.Summon(state: GameStateFromPlayer) =
+        state.Player.Hand
+        |> List.head
+
+      member this.Attack(state: GameStateFromPlayer) =
         PhysicalAttack
