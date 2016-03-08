@@ -8,20 +8,21 @@ module Game =
     let state =  g |> Game.state pl
     in
       // 全滅判定
-      if state.Board |> Map.forall (fun _ -> Card.isDead)
+      if state.Player.Hand |> List.isEmpty
       then
         g |> Game.endWith (pl |> Player.inverse |> Win)
       else
-        g |> Game.happen (EvSummon (brain.Summon(pl, state)))
+        g |> Game.happen (EvSummon (brain.Summon(state)))
         
   let nextActor actedPls (g: Game) =
-      g.Dohyo
-      |> Map.toList
+      g
+      |> Game.dohyoCards
+      |> Set.toList
       |> List.filter (fun (pl, _) ->
           actedPls |> Set.contains pl |> not
           )
       |> List.tryMaxBy
-          (fun (pl, cardId) -> (g |> Game.card cardId).Spec.Spd)
+          (fun cardId -> (g |> Game.card cardId).Spec.Spd)
       |> Option.map fst
 
   let doCombatEvent actedPls g =
@@ -43,7 +44,7 @@ module Game =
       | None ->
         let brain = (g |> Game.player pl).Brain
         in
-          brain.Attack(pl, g |> Game.state pl)
+          brain.Attack(g |> Game.state pl)
     in
       (g, attackWay)
 
