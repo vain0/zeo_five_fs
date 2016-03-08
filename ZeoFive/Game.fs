@@ -87,7 +87,9 @@ module Game =
           g |> doSummonSelectEvent pl
 
       | EvSummon cardId ->
-          g |> Game.updateDohyo (fst cardId) cardId
+          g
+          |> Game.updateDohyo (fst cardId) cardId
+          |> Game.updateHand (fst cardId) (List.filter ((<>) cardId))
 
       | EvCombat actedPls ->
           g |> doCombatEvent actedPls
