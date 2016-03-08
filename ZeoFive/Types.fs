@@ -53,12 +53,6 @@ module Types =
     | Win           of PlayerId
     | Draw
 
-  type Phase =
-    | PhGameBegin
-    | PhGameEnd       of GameResult
-    | PhSummon        of PlayerId
-    | PhCombat        of Set<PlayerId>
-
   type Event =
     | EvSummonSelect  of PlayerId
     | EvSummon        of CardId
