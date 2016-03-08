@@ -4,15 +4,17 @@ open ZeoFive.Core
 
 module Game =
   let doSummonSelectEvent pl (g: Game) =
-    let brain = (g |> Game.player pl).Brain
-    let state =  g |> Game.state pl
-    in
-      // 全滅判定
-      if state.Player.Hand |> List.isEmpty
-      then
-        g |> Game.endWith (pl |> Player.inverse |> Win)
-      else
-        g |> Game.happen (EvSummon (brain.Summon(state)))
+    // 全滅判定
+    if (g |> Game.player pl).Hand |> List.isEmpty
+    then
+      g |> Game.endWith (pl |> Player.inverse |> Win)
+    else
+      let brain     = (g |> Game.player pl).Brain
+      let state     =  g |> Game.state pl
+      let cardId    = brain.Summon(state)
+      in
+        assert (g |> Game.card cardId |> Card.owner |> (=) pl)
+      ; g |> Game.happen (EvSummon (cardId))
         
   let nextActor actedPls (g: Game) =
       g
@@ -26,6 +28,7 @@ module Game =
       |> Option.map fst
 
   let doCombatEvent actedPls g =
+    assert (g |> Game.dohyoCards |> Set.count |> (=) 2)
     match g |> nextActor actedPls with
     | None ->
         g |> Game.happen (EvCombat Set.empty)
