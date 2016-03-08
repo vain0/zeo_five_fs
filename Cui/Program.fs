@@ -21,7 +21,7 @@ module Helper =
       Cards   = T5.replicate card
     }
 
-  let makeStupidPlayer name card =
+  let makeStupidEntrant name card =
     {
       Name    = name
       Deck    = makeDeckByReplicate card
@@ -33,8 +33,8 @@ let main argv =
 
   let card1 = makeCard  50 50 50 50
   let card2 = makeCard 100 60 40  0
-  let pl1   = makeStupidPlayer "50-person" card1
-  let pl2   = makeStupidPlayer "164" card2
+  let pl1   = makeStupidEntrant "50-person" card1
+  let pl2   = makeStupidEntrant "164" card2
   let audience =
     [
       ConsoleBroadcaster() :> IListener

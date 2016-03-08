@@ -74,11 +74,17 @@ module Types =
     abstract member Summon: PlayerId * GameState -> CardId
     abstract member Attack: PlayerId * GameState -> AttackWay
 
-  type Player =
+  type Entrant =
     {
       Name    : string
       Deck    : Deck
       Brain   : IBrain
+    }
+
+  type Player =
+    {
+      Name        : string
+      Brain       : IBrain
     }
 
   type GameStateFromListener =

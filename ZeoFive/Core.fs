@@ -38,6 +38,12 @@ module Player =
     | Player1 -> Player2
     | Player2 -> Player1
 
+  let init (entrant: Entrant): Player =
+    {
+      Name    = entrant.Name
+      Brain   = entrant.Brain
+    }
+
 module AttackWay =
   let inverse =
     function
@@ -45,11 +51,11 @@ module AttackWay =
     | MagicalAttack  -> PhysicalAttack
 
 module Game =
-  let init audience pl1 pl2 =
-    let deckInit plId (pl: Player) =
+  let init audience ent1 ent2 =
+    let deckInit plId (ent: Entrant) =
       T5.zip
         (NPCardId.all |> T5.map (fun c -> (plId, c)))
-        (pl.Deck.Cards)
+        (ent.Deck.Cards)
       |> T5.toList
       |> List.map (fun (cardId, spec) ->
           let card = Card.init cardId spec
@@ -57,9 +63,11 @@ module Game =
           )
     let initBoard =
       List.append
-        (pl1 |> deckInit Player1)
-        (pl2 |> deckInit Player2)
+        (ent1 |> deckInit Player1)
+        (ent2 |> deckInit Player2)
       |> Map.ofList
+    let pl1 = Player.init ent1
+    let pl2 = Player.init ent2
     in
       {
         Players       = (pl1, pl2)
