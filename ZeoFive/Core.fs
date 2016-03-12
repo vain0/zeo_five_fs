@@ -93,14 +93,14 @@ module Game =
         Kont          = [EvGameBegin]
       }
 
-  let player pl (g: Game) =
-    g.PlayerStore |> Map.find pl
+  let player plId (g: Game) =
+    g.PlayerStore |> Map.find plId
 
   let card cardId (g: Game) =
     g.CardStore |> Map.find cardId
 
-  let tryDohyoCard pl (g: Game) =
-    (g |> player pl).Dohyo
+  let tryDohyoCard plId (g: Game) =
+    (g |> player plId).Dohyo
     |> Option.map (fun cardId -> g |> card cardId)
 
   let dohyoCards (g: Game) =
@@ -110,22 +110,22 @@ module Game =
     |> Set.ofList
 
   /// プレイヤーにカードが見えているか？
-  let isRevealedTo pl cardId (g: Game) =
+  let isRevealedTo plId cardId (g: Game) =
     [
-      (g |> card cardId |> Card.owner = pl)
+      (g |> card cardId |> Card.owner = plId)
       (g |> dohyoCards |> Set.contains cardId)
     ] |> List.exists id
 
-  /// プレイヤー pl からみた場況
-  let state pl (g: Game): GameStateFromPlayer =
+  /// プレイヤー plId からみた場況
+  let state plId (g: Game): GameStateFromPlayer =
     {
       Player =
-        g |> player pl
+        g |> player plId
       Opponent =
-        g |> player (pl |> Player.inverse) |> Player.exterior
+        g |> player (plId |> Player.inverse) |> Player.exterior
       CardStore =
         g.CardStore
-        |> Map.filter (fun _ card -> g |> isRevealedTo pl (card.CardId))
+        |> Map.filter (fun _ card -> g |> isRevealedTo plId (card.CardId))
     }
 
   let happen ev (g: Game) =
@@ -136,22 +136,22 @@ module Game =
   let endWith r g =
     { g with Kont = [EvGameEnd r] }
 
-  let updatePlayer pl player (g: Game) =
+  let updatePlayer plId player (g: Game) =
     { g with
-        PlayerStore = g.PlayerStore |> Map.add pl player
+        PlayerStore = g.PlayerStore |> Map.add plId player
       }
 
-  let updateDohyo pl cardId (g: Game) =
+  let updateDohyo plId cardId (g: Game) =
     let player =
-      { (g |> player pl) with Dohyo = Some cardId }
+      { (g |> player plId) with Dohyo = Some cardId }
     in
-      g |> updatePlayer pl player
+      g |> updatePlayer plId player
 
-  let updateHand pl f (g: Game) =
-    let player = g |> player pl
+  let updateHand plId f (g: Game) =
+    let player = g |> player plId
     let player = { player with Hand = (player.Hand |> f) }
     in
-      g |> updatePlayer pl player
+      g |> updatePlayer plId player
 
   let updateCard cardId card (g: Game) =
     assert (card.CardId = cardId)

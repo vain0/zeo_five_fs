@@ -3,25 +3,25 @@
 open ZeoFive.Core
 
 module Game =
-  let doSummonSelectEvent pl (g: Game) =
+  let doSummonSelectEvent plId (g: Game) =
     // 全滅判定
-    if (g |> Game.player pl).Hand |> List.isEmpty
+    if (g |> Game.player plId).Hand |> List.isEmpty
     then
-      g |> Game.endWith (pl |> Player.inverse |> Win)
+      g |> Game.endWith (plId |> Player.inverse |> Win)
     else
-      let brain     = (g |> Game.player pl).Brain
-      let state     =  g |> Game.state pl
+      let brain     = (g |> Game.player plId).Brain
+      let state     =  g |> Game.state plId
       let cardId    = brain.Summon(state)
       in
-        assert (g |> Game.card cardId |> Card.owner |> (=) pl)
+        assert (g |> Game.card cardId |> Card.owner |> (=) plId)
       ; g |> Game.happen (EvSummon (cardId))
         
   let nextActor actedPls (g: Game) =
       g
       |> Game.dohyoCards
       |> Set.toList
-      |> List.filter (fun (pl, _) ->
-          actedPls |> Set.contains pl |> not
+      |> List.filter (fun (plId, _) ->
+          actedPls |> Set.contains plId |> not
           )
       |> List.tryMaxBy
           (fun cardId -> (g |> Game.card cardId).Spec.Spd)
@@ -37,35 +37,35 @@ module Game =
         |> Game.happen (EvCombat (actedPls |> Set.add actor))
         |> Game.happen (EvAttackSelect actor)
 
-  let attackSelect pl (g: Game) =
+  let attackSelect plId (g: Game) =
     let attacker =
-      g |> Game.tryDohyoCard pl |> Option.get
+      g |> Game.tryDohyoCard plId |> Option.get
     let attackWay =
       match attacker.PrevWay with
       | Some prev ->
           prev |> AttackWay.inverse
       | None ->
-        let brain = (g |> Game.player pl).Brain
+        let brain = (g |> Game.player plId).Brain
         in
-          brain.Attack(g |> Game.state pl)
+          brain.Attack(g |> Game.state plId)
     in
       (g, attackWay)
 
-  let doAttackSelectEvent pl g =
+  let doAttackSelectEvent plId g =
     let (g, attackWay) =
-        g |> attackSelect pl
+        g |> attackSelect plId
     let attacker =
-        g |> Game.tryDohyoCard pl |> Option.get
+        g |> Game.tryDohyoCard plId |> Option.get
     in
       g
       |> Game.updateCard
           attacker.CardId
           { attacker with PrevWay = Some attackWay }
-      |> Game.happen (EvAttack (pl, attackWay))
+      |> Game.happen (EvAttack (plId, attackWay))
 
-  let doAttackEvent (pl, attackWay) g =
-    let plTarget  = pl |> Player.inverse
-    let attacker  = g |> Game.tryDohyoCard pl       |> Option.get
+  let doAttackEvent (plId, attackWay) g =
+    let plTarget  = plId |> Player.inverse
+    let attacker  = g |> Game.tryDohyoCard plId     |> Option.get
     let target    = g |> Game.tryDohyoCard plTarget |> Option.get
     let amount    =
       attacker
@@ -86,8 +86,8 @@ module Game =
 
   let doEvent ev (g: Game) =
       match ev with
-      | EvSummonSelect pl ->
-          g |> doSummonSelectEvent pl
+      | EvSummonSelect plId ->
+          g |> doSummonSelectEvent plId
 
       | EvSummon cardId ->
           g
@@ -97,11 +97,11 @@ module Game =
       | EvCombat actedPls ->
           g |> doCombatEvent actedPls
 
-      | EvAttackSelect pl ->
-          g |> doAttackSelectEvent pl
+      | EvAttackSelect plId ->
+          g |> doAttackSelectEvent plId
 
-      | EvAttack (pl, attackWay) ->
-          g |> doAttackEvent (pl, attackWay)
+      | EvAttack (plId, attackWay) ->
+          g |> doAttackEvent (plId, attackWay)
 
       | EvDamage (cardId, amount) ->
           g |> doDamageEvent (cardId, amount)
