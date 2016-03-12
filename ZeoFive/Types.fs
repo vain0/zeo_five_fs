@@ -95,7 +95,7 @@ module Types =
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
       Kont        : Event list
-      Event       : Event<Game * Game * Event>
+      ObsSource   : Observable.Source<Game * Event>
     }
 
   type Entrant =

@@ -3,7 +3,8 @@
 open ZeoFive.Core
 
 module Broadcaster =
-  let broadcaster (g, g', ev) =
+  let broadcaster obs =
+    let f (g, g', ev) =
       match ev with
       | EvSummonSelect pl ->
           ()
@@ -55,3 +56,8 @@ module Broadcaster =
 
       | EvGameEnd (Draw) ->
           printfn "Draw."
+    in
+      obs
+      |> Observable.pairwise
+      |> Observable.map (fun ((g, _), (g', ev)) -> (g, g', ev))
+      |> Observable.subscribe f

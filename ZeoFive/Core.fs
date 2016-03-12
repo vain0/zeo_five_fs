@@ -91,7 +91,7 @@ module Game =
         PlayerStore   = initPlayerStore
         CardStore     = initCardStore
         Kont          = [EvGameBegin]
-        Event         = new Event<Game * Game * Event>()
+        ObsSource     = Observable.Source()
       }
 
   let player plId (g: Game) =

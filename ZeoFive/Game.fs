@@ -1,5 +1,6 @@
 ﻿namespace ZeoFive
 
+open System
 open ZeoFive.Core
 
 module Game =
@@ -129,7 +130,7 @@ module Game =
             { g with Kont = kont }
             |> doEvent ev
           let () =
-            g.Event.Trigger(g, g', ev)
+            g.ObsSource.Next((g', ev))
           in
             match ev with
             | EvGameEnd r -> (g', r)
@@ -142,8 +143,12 @@ module Game =
     let g =
       (pl1, pl2)
       ||> Game.init
-    let () =
+    let disposables =
       audience
-      |> List.iter (fun au -> g.Event.Publish.Add(au))
+      |> List.map (fun au -> au g.ObsSource.AsObservable)
     in
-      g |> doNextEvent
+      try
+        g |> doNextEvent
+      finally
+        disposables
+        |> List.iter (fun (disp: IDisposable) -> disp.Dispose())
