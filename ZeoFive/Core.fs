@@ -106,7 +106,7 @@ module Game =
   let dohyoCards (g: Game) =
     g.PlayerStore
     |> Map.toList
-    |> List.choose (fun (_, player) -> player.Dohyo)
+    |> List.choose (fun (_, pl) -> pl.Dohyo)
     |> Set.ofList
 
   /// プレイヤーにカードが見えているか？
@@ -136,22 +136,22 @@ module Game =
   let endWith r g =
     { g with Kont = [EvGameEnd r] }
 
-  let updatePlayer plId player (g: Game) =
+  let updatePlayer plId pl (g: Game) =
     { g with
-        PlayerStore = g.PlayerStore |> Map.add plId player
+        PlayerStore = g.PlayerStore |> Map.add plId pl
       }
 
   let updateDohyo plId cardId (g: Game) =
-    let player =
+    let pl =
       { (g |> player plId) with Dohyo = Some cardId }
     in
-      g |> updatePlayer plId player
+      g |> updatePlayer plId pl
 
   let updateHand plId f (g: Game) =
-    let player = g |> player plId
-    let player = { player with Hand = (player.Hand |> f) }
+    let pl = g |> player plId
+    let pl = { pl with Hand = (pl.Hand |> f) }
     in
-      g |> updatePlayer plId player
+      g |> updatePlayer plId pl
 
   let updateCard cardId card (g: Game) =
     assert (card.CardId = cardId)
