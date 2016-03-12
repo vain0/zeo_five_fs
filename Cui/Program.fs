@@ -38,9 +38,10 @@ let main argv =
       Broadcaster.broadcaster
     ]
 
-  (pl1, pl2)
-  ||> ZeoFive.Game.play audience
-  |> ignore
+  do
+    (pl1, pl2)
+    ||> ZeoFive.Game.play audience
+    |> printfn "%A"
 
   // exit code
   0

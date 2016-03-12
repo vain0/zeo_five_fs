@@ -4,19 +4,37 @@ open System
 open ZeoFive.Core
 
 module Game =
+  let doGameEndEvent r (g: Game) =
+    cont {
+      do g |> Game.happen (EvGameEnd r)
+      return! g.EndCont r
+    }
+
+  let doSummonEvent cardId g =
+    cont {
+      let g =
+        g
+        |> Game.updateDohyo (fst cardId) cardId
+        |> Game.updateHand (fst cardId) (List.filter ((<>) cardId))
+      do
+        g |> Game.happen (EvSummon (cardId))
+      return g
+    }
+
   let doSummonSelectEvent plId (g: Game) =
-    // 全滅判定
-    if (g |> Game.player plId).Hand |> List.isEmpty
-    then
-      g |> Game.endWith (plId |> Player.inverse |> Win)
-    else
-      let brain     = (g |> Game.player plId).Brain
-      let state     =  g |> Game.state plId
-      let cardId    = brain.Summon(state)
-      in
-        assert (g |> Game.card cardId |> Card.owner |> (=) plId)
-      ; g |> Game.happen (EvSummon (cardId))
-        
+    cont {
+      // 全滅判定
+      if (g |> Game.player plId).Hand |> List.isEmpty
+      then
+        return! g |> doGameEndEvent (plId |> Player.inverse |> Win)
+      else
+        let brain     = (g |> Game.player plId).Brain
+        let state     =  g |> Game.state plId
+        let cardId    = brain.Summon(state)
+        do assert (g |> Game.card cardId |> Card.owner |> (=) plId)
+        return! g |> doSummonEvent cardId
+    }
+
   let nextActor actedPls (g: Game) =
       g
       |> Game.dohyoCards
@@ -27,16 +45,6 @@ module Game =
       |> List.tryMaxBy
           (fun cardId -> (g |> Game.card cardId).Spec.Spd)
       |> Option.map fst
-
-  let doCombatEvent actedPls g =
-    assert (g |> Game.dohyoCards |> Set.count |> (=) 2)
-    match g |> nextActor actedPls with
-    | None ->
-        g |> Game.happen (EvCombat Set.empty)
-    | Some actor ->
-        g
-        |> Game.happen (EvCombat (actedPls |> Set.add actor))
-        |> Game.happen (EvAttackSelect actor)
 
   let attackSelect plId (g: Game) =
     let attacker =
@@ -52,103 +60,95 @@ module Game =
     in
       (g, attackWay)
 
-  let doAttackSelectEvent plId g =
-    let (g, attackWay) =
-        g |> attackSelect plId
-    let attacker =
-        g |> Game.tryDohyoCard plId |> Option.get
-    in
-      g
-      |> Game.updateCard
-          attacker.CardId
-          { attacker with PrevWay = Some attackWay }
-      |> Game.happen (EvAttack (plId, attackWay))
+  let doDieEvent cardId g =
+    cont {
+      do g |> Game.happen (EvDie cardId)
+      let! g =
+        g |> doSummonSelectEvent (fst cardId)
+      return g
+    }
 
-  let doAttackEvent (plId, attackWay) g =
-    let plTarget  = plId |> Player.inverse
-    let attacker  = g |> Game.tryDohyoCard plId     |> Option.get
-    let target    = g |> Game.tryDohyoCard plTarget |> Option.get
-    let amount    =
-      attacker
-      |> Card.power attackWay
-      |> min (target |> Card.curHp)
-    in
-      g |> Game.happen (EvDamage (target.CardId, amount))
+  let doDamageEvent restartCombat (cardId, amount) (g: Game) =
+    cont {
+      let card    = g |> Game.card cardId
+      let card    = { card with Damage = card.Damage + amount }
+      let g       = g |> Game.updateCard cardId card
+      do g |> Game.happen (EvDamage (cardId, amount))
 
-  let doDamageEvent (cardId, amount) g =
-    let card    = g |> Game.card cardId
-    let card    = { card with Damage = card.Damage + amount }
-    let g       = g |> Game.updateCard cardId card
-    in
       // 死亡判定
       if (card |> Card.curHp) <= 0
-      then g |> Game.happen (EvDie cardId)
-      else g
+      then
+        let! g = g |> doDieEvent cardId
+        return! restartCombat g
+      else
+        return g
+    }
 
-  let doEvent ev (g: Game) =
-      match ev with
-      | EvSummonSelect plId ->
-          g |> doSummonSelectEvent plId
+  let doAttackSelectEvent plId g =
+    cont {
+      let (g, attackWay) =
+        g |> attackSelect plId
+      let attacker =
+        g |> Game.tryDohyoCard plId |> Option.get
+      let g =
+        g
+        |> Game.updateCard
+            attacker.CardId
+            { attacker with PrevWay = Some attackWay }
+      do g |> Game.happen (EvAttackSelect (plId, attackWay))
+      return (g, attackWay)
+    }
 
-      | EvSummon cardId ->
-          g
-          |> Game.updateDohyo (fst cardId) cardId
-          |> Game.updateHand (fst cardId) (List.filter ((<>) cardId))
+  let doAttackEvent restartCombat (plId, attackWay) g =
+    cont {
+      let plTarget  = plId |> Player.inverse
+      let attacker  = g |> Game.tryDohyoCard plId     |> Option.get
+      let target    = g |> Game.tryDohyoCard plTarget |> Option.get
+      let amount    =
+        attacker
+        |> Card.power attackWay
+        |> min (target |> Card.curHp)
+      let! g =
+        g |> doDamageEvent restartCombat (target.CardId, amount)
+      return g
+    }
 
-      | EvCombat actedPls ->
-          g |> doCombatEvent actedPls
+  let rec doCombatEvent actedPls g =
+    cont {
+      do assert (g |> Game.dohyoCards |> Set.count |> (=) 2)
+      let! g =
+        match g |> nextActor actedPls with
+        | None ->
+            cont { return g }
+        | Some actor ->
+            Cont.callCC (fun restartCombat -> cont {
+              let! (g, attackWay) =
+                g |> doAttackSelectEvent actor
+              let! g =
+                g |> doAttackEvent restartCombat (actor, attackWay)
+              return! g |> doCombatEvent (actedPls |> Set.add actor)
+            })
+      return! g |> doCombatEvent (Set.empty)
+    }
 
-      | EvAttackSelect plId ->
-          g |> doAttackSelectEvent plId
-
-      | EvAttack (plId, attackWay) ->
-          g |> doAttackEvent (plId, attackWay)
-
-      | EvDamage (cardId, amount) ->
-          g |> doDamageEvent (cardId, amount)
-
-      | EvDie cardId ->
-          { g with Kont = [] }
-          |> Game.happen (EvCombat Set.empty)
-          |> Game.happen (EvSummonSelect (fst cardId))
-
-      | EvGameBegin ->
-          g
-          |> Game.happen (EvCombat Set.empty)
-          |> Game.happen (EvSummonSelect Player2)
-          |> Game.happen (EvSummonSelect Player1)
-
-      | EvGameEnd _ ->
-          g
-
-  let rec doNextEvent (g: Game) =
-    let rec loop g =
-      match g.Kont with
-      | [] -> failwith "game stuck"
-      | ev :: kont ->
-          let g' =
-            { g with Kont = kont }
-            |> doEvent ev
-          let () =
-            g.ObsSource.Next((g', ev))
-          in
-            match ev with
-            | EvGameEnd r -> (g', r)
-            | _ ->
-                g' |> loop
-    in
-      loop g
+  let startGame g =
+    cont {
+      let! g = g |> doSummonSelectEvent Player1
+      let! g = g |> doSummonSelectEvent Player2
+      let! g = g |> doCombatEvent Set.empty
+      return Draw  // dummy (combat continues forever)
+    }
 
   let play audience pl1 pl2 =
-    let g =
-      (pl1, pl2)
-      ||> Game.init
-    let disposables =
-      audience
-      |> List.map (fun au -> au g.ObsSource.AsObservable)
-    in
-      try
-        g |> doNextEvent
-      finally
-        disposables
-        |> List.iter (fun (disp: IDisposable) -> disp.Dispose())
+    Cont.callCC (fun endGame -> cont {
+      let g =
+        (pl1, pl2)
+        ||> Game.init endGame
+      let disposables =  // dispose されない
+        audience
+        |> List.map (fun au -> au g.ObsSource.AsObservable)
+      return! g |> startGame
+      //do disposables |> List.iter (fun (disp: IDisposable) -> disp.Dispose())
+    })
+    |> Cont.run
+    <| id

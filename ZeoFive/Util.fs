@@ -40,6 +40,55 @@ module List =
     in
       self |> List.fold folder None |> Option.map fst
 
+type Cont<'r,'t> =
+  | Cont of (('t -> 'r) -> 'r)
+
+[<RequireQualifiedAccess>]
+module Cont =
+  let run (Cont x) = (x: ('T -> 'R) -> 'R)
+
+  let callCC (f: ('T -> Cont<'R, 'U>) -> _) =
+    Cont (fun k -> run (f (fun a -> Cont (fun _ -> k a))) k)
+
+  let map  (f: 'T -> _) (Cont x) : Cont<_, _> = Cont (fun c -> x (c << f))
+  let bind (f: 'T -> _) (Cont x) : Cont<_, _> = Cont (fun k -> x (fun a -> run (f a) k))          
+  let apply (Cont f) (Cont x)    : Cont<_, _> = Cont (fun k -> f (fun (f': 'T -> _) -> x (k << f')))
+
+  type ContBuilder () =
+    member this.Run(f) = f ()
+
+    member this.Delay(f) = f
+
+    member this.Return(x) =
+      Cont (fun k -> k x)
+
+    member this.ReturnFrom(expr) = expr
+
+    member this.Bind(p, rest) =
+      bind rest p
+
+    member this.Using(x: #IDisposable, f) =
+      try f x
+      finally
+        match box x with
+        | null -> ()
+        | notNull -> x.Dispose()
+
+    member this.Combine(x, rest) =
+      rest ()
+
+    member this.TryWith(f, h) =
+      try f ()
+      with | e -> h e
+
+    member this.TryFinally(f, g) =
+      try f ()
+      finally g ()
+
+[<AutoOpen>]
+module ContMonadSyntax =
+  let cont = Cont.ContBuilder()
+
 [<RequireQualifiedAccess>]
 module Observable =
   open System.Diagnostics

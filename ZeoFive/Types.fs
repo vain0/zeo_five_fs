@@ -54,8 +54,8 @@ module Types =
     | EvSummonSelect  of PlayerId
     | EvSummon        of CardId
     | EvCombat        of Set<PlayerId>
-    | EvAttackSelect  of PlayerId
-    | EvAttack        of PlayerId * AttackWay
+    | EvAttackSelect  of PlayerId * AttackWay
+    | EvAttack        of PlayerId
     | EvDamage        of CardId * int
     | EvDie           of CardId
     | EvGameBegin
@@ -94,7 +94,7 @@ module Types =
     {
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
-      Kont        : Event list
+      EndCont     : GameResult -> Cont<GameResult, Game>
       ObsSource   : Observable.Source<Game * Event>
     }
 

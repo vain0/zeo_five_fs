@@ -65,7 +65,7 @@ module AttackWay =
     | MagicalAttack  -> PhysicalAttack
 
 module Game =
-  let init ent1 ent2 =
+  let init endGame ent1 ent2 =
     let deckInit plId (ent: Entrant) =
       T5.zip
         (NPCardId.all |> T5.map (fun c -> (plId, c)))
@@ -90,7 +90,7 @@ module Game =
       {
         PlayerStore   = initPlayerStore
         CardStore     = initCardStore
-        Kont          = [EvGameBegin]
+        EndCont       = endGame
         ObsSource     = Observable.Source()
       }
 
@@ -130,12 +130,7 @@ module Game =
     }
 
   let happen ev (g: Game) =
-    { g with
-        Kont = ev :: g.Kont
-      }
-
-  let endWith r g =
-    { g with Kont = [EvGameEnd r] }
+    g.ObsSource.Next(g, ev)
 
   let updatePlayer plId pl (g: Game) =
     { g with
