@@ -4,6 +4,7 @@ module Util
 [<AutoOpen>]
 module Misc =
   let flip f x y = f y x
+  let tap f x = f x; x
 
   type T5<'T> =
     'T * 'T * 'T * 'T * 'T
