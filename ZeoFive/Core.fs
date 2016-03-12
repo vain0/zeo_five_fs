@@ -91,6 +91,7 @@ module Game =
         PlayerStore   = initPlayerStore
         CardStore     = initCardStore
         Kont          = [EvGameBegin]
+        Event         = new Event<Game * Game * Event>()
       }
 
   let player plId (g: Game) =

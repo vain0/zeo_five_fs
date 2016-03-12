@@ -1,4 +1,4 @@
-﻿module Brain
+﻿namespace ZeoFive.Cui
 
 open System
 open ZeoFive.Core

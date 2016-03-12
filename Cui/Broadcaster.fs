@@ -1,10 +1,9 @@
-﻿module Broadcaster
+﻿namespace ZeoFive.Cui
 
 open ZeoFive.Core
 
-type ConsoleBroadcaster() =
-  interface IListener with
-    member this.Listen(g, g', ev) =
+module Broadcaster =
+  let broadcaster (g, g', ev) =
       match ev with
       | EvSummonSelect pl ->
           ()

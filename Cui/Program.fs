@@ -1,8 +1,6 @@
-﻿module Program
+﻿module ZeoFive.Cui.Program
 
 open ZeoFive.Core
-open Brain
-open Broadcaster
 
 [<AutoOpen>]
 module Helper =
@@ -37,7 +35,7 @@ let main argv =
   let pl2   = makeStupidEntrant "164" card2
   let audience =
     [
-      ConsoleBroadcaster() :> IListener
+      Broadcaster.broadcaster
     ]
 
   (pl1, pl2)

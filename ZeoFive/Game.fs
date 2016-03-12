@@ -120,7 +120,7 @@ module Game =
       | EvGameEnd _ ->
           g
 
-  let rec doNextEvent audience (g: Game) =
+  let rec doNextEvent (g: Game) =
     let rec loop g =
       match g.Kont with
       | [] -> failwith "game stuck"
@@ -129,8 +129,7 @@ module Game =
             { g with Kont = kont }
             |> doEvent ev
           let () =
-            audience
-            |> List.iter (fun (lis: IListener) -> lis.Listen(g, g', ev))
+            g.Event.Trigger(g, g', ev)
           in
             match ev with
             | EvGameEnd r -> (g', r)
@@ -140,6 +139,11 @@ module Game =
       loop g
 
   let play audience pl1 pl2 =
-    (pl1, pl2)
-    ||> Game.init
-    |> doNextEvent audience
+    let g =
+      (pl1, pl2)
+      ||> Game.init
+    let () =
+      audience
+      |> List.iter (fun au -> g.Event.Publish.Add(au))
+    in
+      g |> doNextEvent

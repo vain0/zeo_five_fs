@@ -95,10 +95,8 @@ module Types =
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
       Kont        : Event list
+      Event       : Event<Game * Game * Event>
     }
-
-  type IListener =
-    abstract member Listen: Game * Game * Event -> unit
 
   type Entrant =
     {
