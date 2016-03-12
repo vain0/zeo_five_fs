@@ -43,6 +43,9 @@ module Types =
       Cards   : T5<CardSpec>
     }
 
+  type Hand =
+    list<CardId>
+
   type GameResult =
     | Win           of PlayerId
     | Draw
@@ -76,7 +79,7 @@ module Types =
       PlayerId    : PlayerId
       Name        : string
       Brain       : IBrain
-      Hand        : list<CardId>
+      Hand        : Hand
       Dohyo       : option<CardId>
     }
 
