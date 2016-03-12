@@ -19,14 +19,14 @@ module Broadcaster =
       | EvCombat _ ->
           ()
 
-      | EvAttackSelect pl ->
-          ()
-
-      | EvAttack (pl, way) ->
+      | EvAttackSelect (pl, way) ->
           let card = g |> Game.tryDohyoCard pl |> Option.get
           do
             printfn "%s attacked with %A."
               (card.Spec.Name) way
+
+      | EvAttack pl ->
+          ()
 
       | EvDamage (cardId, amount) ->
           let card  = g  |> Game.card cardId
