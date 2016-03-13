@@ -139,6 +139,15 @@ module Observable =
     |> Observable.choose
         (fun (opt, i) -> opt |> Option.map (fun x -> (x, i)))
 
+  let duplicateFirst obs =
+    let obs' =
+      obs
+      |> indexed
+      |> Observable.choose
+          (fun (x, i) -> if i = 0 then Some x else None)
+    in
+      Observable.merge obs obs'
+
   type Source<'T>() =
     let protect function1 =
       let mutable ok = false
