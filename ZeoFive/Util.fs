@@ -50,6 +50,8 @@ module Cont =
   let callCC (f: ('T -> Cont<'R, 'U>) -> _) =
     Cont (fun k -> run (f (fun a -> Cont (fun _ -> k a))) k)
 
+  let result x = Cont (fun k -> k x)
+
   let map  (f: 'T -> _) (Cont x) : Cont<_, _> = Cont (fun c -> x (c << f))
   let bind (f: 'T -> _) (Cont x) : Cont<_, _> = Cont (fun k -> x (fun a -> run (f a) k))          
   let apply (Cont f) (Cont x)    : Cont<_, _> = Cont (fun k -> f (fun (f': 'T -> _) -> x (k << f')))
@@ -60,7 +62,7 @@ module Cont =
     member this.Delay(f) = f
 
     member this.Return(x) =
-      Cont (fun k -> k x)
+      result x
 
     member this.ReturnFrom(expr) = expr
 
