@@ -1,9 +1,37 @@
-﻿namespace ZeoFive
+﻿namespace ZeoFive.Core
 
 open System
-open ZeoFive.Core
 
 module Game =
+  let init endGame ent1 ent2 =
+    let deckInit plId (ent: Entrant) =
+      T5.zip
+        (NPCardId.all |> T5.map (fun c -> (plId, c)))
+        (ent.Deck.Cards)
+      |> T5.toList
+      |> List.map (fun (cardId, spec) ->
+          let card = Card.init cardId spec
+          in (cardId, card)
+          )
+    let initCardStore =
+      List.append
+        (ent1 |> deckInit Player1)
+        (ent2 |> deckInit Player2)
+      |> Map.ofList
+    let initPlayerStore =
+      [
+        (Player1, Player.init Player1 ent1)
+        (Player2, Player.init Player2 ent2)
+      ]
+      |> Map.ofList
+    in
+      {
+        PlayerStore   = initPlayerStore
+        CardStore     = initCardStore
+        EndGame       = endGame
+        ObsSource     = Observable.Source()
+      }
+
   let happen ev =
     stcont {
       let! g = StateCont.get
@@ -13,31 +41,71 @@ module Game =
   let getPlayer plId =
     stcont {
       let! g = StateCont.get
-      return g |> Game.player plId
+      return g.PlayerStore |> Map.find plId
+    }
+
+  let getPlayers () =
+    stcont {
+      let! g = StateCont.get
+      return g.PlayerStore |> Map.toList |> List.map snd
     }
 
   let getCard cardId =
     stcont {
       let! g = StateCont.get
-      return g |> Game.card cardId
+      return g.CardStore |> Map.find cardId
+    }
+
+  let tryGetDohyoCard plId =
+    stcont {
+      let! pl = getPlayer plId
+      match pl.Dohyo with
+      | None ->
+          return None
+      | Some cardId ->
+          let! card = getCard cardId
+          return Some card
     }
 
   let getDohyoCard plId =
     stcont {
-      let! g = StateCont.get
-      return g |> Game.tryDohyoCard plId |> Option.get
+      let! cardOpt = tryGetDohyoCard plId
+      return cardOpt |> Option.get
     }
 
   let getDohyoCards () =
     stcont {
-      let! g = StateCont.get
-      return g |> Game.dohyoCards
+      let! pls      = getPlayers ()
+      let dohyo     = pls |> List.choose (fun pl -> pl.Dohyo)
+      return dohyo |> Set.ofList
+    }
+    
+  /// プレイヤーにカードが見えているか？
+  let isRevealedTo plId cardId =
+    stcont {
+      let! card         = getCard cardId
+      let! dohyoCards   = getDohyoCards ()
+      return
+        [
+          (card |> Card.owner = plId)
+          (dohyoCards |> Set.contains cardId)
+        ] |> List.exists id
     }
 
+  /// プレイヤー plId からみた場況
   let getState plId =
     stcont {
-      let! g = StateCont.get
-      return g |> Game.state plId
+      let! pl         = getPlayer plId
+      let! opponent   = getPlayer (plId |> Player.inverse)
+      let! g          = StateCont.get
+      let isRevealed _ card =
+        g |> StateCont.eval (isRevealedTo plId (card.CardId))
+      return
+        {
+          Player      = pl
+          Opponent    = opponent |> Player.exterior
+          CardStore   = g.CardStore |> Map.filter isRevealed
+        }
     }
 
   let updatePlayer pl =
@@ -52,7 +120,6 @@ module Game =
   let updateDohyo cardId =
     stcont {
       let plId = fst cardId
-      let! g = StateCont.get
       let! pl = getPlayer plId
       let  pl = { pl with Dohyo = Some cardId }
       return! updatePlayer pl
@@ -115,7 +182,10 @@ module Game =
             actedPls |> Set.contains plId |> not
             )
         |> List.tryMaxBy
-            (fun cardId -> (g |> Game.card cardId).Spec.Spd)
+            (fun cardId ->
+                let card = StateCont.eval (getCard cardId) g
+                in card.Spec.Spd
+                )
         |> Option.map fst
     }
 
@@ -205,7 +275,7 @@ module Game =
     Cont.callCC (fun endGame -> cont {
       let g =
         (pl1, pl2)
-        ||> Game.init endGame
+        ||> init endGame
       let disposables =  // dispose されない
         audience
         |> List.map (fun au -> au g.ObsSource.AsObservable)

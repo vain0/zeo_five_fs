@@ -40,7 +40,7 @@ let main argv =
 
   do
     (pl1, pl2)
-    ||> ZeoFive.Game.play audience
+    ||> ZeoFive.Core.Game.play audience
     |> printfn "%A"
 
   // exit code

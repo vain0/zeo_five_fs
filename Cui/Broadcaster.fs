@@ -10,8 +10,8 @@ module Broadcaster =
           ()
 
       | EvSummon cardId ->
-          let card = g |> Game.card cardId
-          let pl   = g |> Game.player (card |> Card.owner)
+          let card = g |> StateCont.eval (Game.getCard cardId)
+          let pl   = g |> StateCont.eval (Game.getPlayer (card |> Card.owner))
           do
             printfn "Player %s summoned %s."
               (pl.Name) (card.Spec.Name)
@@ -20,7 +20,7 @@ module Broadcaster =
           ()
 
       | EvAttackSelect (pl, way) ->
-          let card = g |> Game.tryDohyoCard pl |> Option.get
+          let card = g |> StateCont.eval (Game.getDohyoCard pl)
           do
             printfn "%s attacked with %A."
               (card.Spec.Name) way
@@ -29,8 +29,8 @@ module Broadcaster =
           ()
 
       | EvDamage (cardId, amount) ->
-          let card  = g  |> Game.card cardId
-          let card' = g' |> Game.card cardId
+          let card  = g  |> StateCont.eval (Game.getCard cardId)
+          let card' = g' |> StateCont.eval (Game.getCard cardId)
           do
             printfn "%s took %d damage. (HP %d -> %d)"
               (card.Spec.Name)
@@ -39,18 +39,20 @@ module Broadcaster =
               (card' |> Card.curHp)
 
       | EvDie cardId ->
-          let card = g |> Game.card cardId
+          let card = g |> StateCont.eval (Game.getCard cardId)
           do
             printfn "%s died." (card.Spec.Name)
 
       | EvGameBegin ->
+          let plName plId =
+            (g |> StateCont.eval (Game.getPlayer plId)).Name
           do
             printfn "-- %s vs %s --"
-              (g |> Game.player Player1).Name
-              (g |> Game.player Player2).Name
+              (plName Player1)
+              (plName Player2)
 
       | EvGameEnd (Win plId) ->
-          let pl = g |> Game.player plId
+          let pl = g |> StateCont.eval (Game.getPlayer plId)
           do
             printfn "Player %s wins!!" (pl.Name)
 
