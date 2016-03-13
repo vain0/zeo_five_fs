@@ -78,7 +78,7 @@ module Game =
     stcont {
       do! happen (EvGameEnd r)
       let! g = StateCont.get
-      return! StateCont.liftCont (g.EndCont r)
+      return! StateCont.liftCont (g.EndGame r)
     }
 
   let doSummonEvent cardId =
@@ -185,7 +185,7 @@ module Game =
               do! doAttackEvent restartCombat (actor, attackWay)
               return! doCombatEvent (actedPls |> Set.add actor)
               })
-      // repeat forever (``Game.EndCont`` is called to end game)
+      // repeat forever (``Game.EndGame`` is called to end game)
       return! doCombatEvent (Set.empty)
     }
 

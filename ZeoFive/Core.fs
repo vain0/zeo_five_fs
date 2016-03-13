@@ -90,7 +90,7 @@ module Game =
       {
         PlayerStore   = initPlayerStore
         CardStore     = initCardStore
-        EndCont       = endGame
+        EndGame       = endGame
         ObsSource     = Observable.Source()
       }
 

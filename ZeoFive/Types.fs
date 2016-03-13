@@ -94,7 +94,7 @@ module Types =
     {
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
-      EndCont     : GameResult -> Cont<GameResult, unit>
+      EndGame     : GameResult -> Cont<GameResult, unit>
       ObsSource   : Observable.Source<Game * Event>
     }
 
