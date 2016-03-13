@@ -132,6 +132,13 @@ module StateContSyntax =
 module Observable =
   open System.Diagnostics
 
+  let indexed obs =
+    obs
+    |> Observable.scan
+        (fun (opt, i) x -> (Some x, i + 1)) (None, -1)
+    |> Observable.choose
+        (fun (opt, i) -> opt |> Option.map (fun x -> (x, i)))
+
   type Source<'T>() =
     let protect function1 =
       let mutable ok = false
