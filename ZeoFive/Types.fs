@@ -94,9 +94,12 @@ module Types =
     {
       PlayerStore : Map<PlayerId, Player>
       CardStore   : Map<CardId, Card>
-      EndCont     : GameResult -> Cont<GameResult, Game>
+      EndCont     : GameResult -> Cont<GameResult, unit>
       ObsSource   : Observable.Source<Game * Event>
     }
+
+  type GameMonad<'a> =
+    StateT<Game, Cont<GameResult, 'a * Game>>
 
   type Entrant =
     {

@@ -129,33 +129,6 @@ module Game =
         |> Map.filter (fun _ card -> g |> isRevealedTo plId (card.CardId))
     }
 
-  let happen ev (g: Game) =
-    g.ObsSource.Next(g, ev)
-
-  let updatePlayer plId pl (g: Game) =
-    { g with
-        PlayerStore = g.PlayerStore |> Map.add plId pl
-      }
-
-  let updateDohyo plId cardId (g: Game) =
-    let pl =
-      { (g |> player plId) with Dohyo = Some cardId }
-    in
-      g |> updatePlayer plId pl
-
-  let updateHand plId f (g: Game) =
-    let pl = g |> player plId
-    let pl = { pl with Hand = (pl.Hand |> f) }
-    in
-      g |> updatePlayer plId pl
-
-  let updateCard cardId card (g: Game) =
-    assert (card.CardId = cardId)
-    { g with
-        CardStore =
-          g.CardStore |> Map.add cardId card
-      }
-
 module Brain =
   type StupidBrain() =
     interface IBrain with
