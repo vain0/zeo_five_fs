@@ -115,6 +115,12 @@ module StateCont =
   let callCC f =
     StateT (fun s -> Cont.callCC (fun cc -> StateT.run (f cc) s))
 
+  let eval m s =
+    Cont.run (StateT.run m s) fst
+
+  let exec m s =
+    Cont.run (StateT.run m s) snd
+
   type StateContBuilder () =
     member this.Run(f) = f ()
     member this.Delay(f) = f
