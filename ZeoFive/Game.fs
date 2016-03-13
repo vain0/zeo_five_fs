@@ -28,7 +28,7 @@ module Game =
       return g |> Game.tryDohyoCard plId |> Option.get
     }
 
-  let getDohyoCards: GameMonad<Set<CardId>> =
+  let getDohyoCards () =
     stcont {
       let! g = StateCont.get
       return g |> Game.dohyoCards
@@ -106,7 +106,7 @@ module Game =
 
   let nextActor actedPls =
     stcont {
-      let! dohyoCards = getDohyoCards
+      let! dohyoCards = getDohyoCards ()
       let! g = StateCont.get
       return
         dohyoCards
@@ -172,9 +172,9 @@ module Game =
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
-  let rec doCombatEvent actedPls: GameMonad<unit> =
+  let rec doCombatEvent actedPls =
     stcont {
-      let! dohyoCards = getDohyoCards
+      let! dohyoCards = getDohyoCards ()
       do assert (dohyoCards |> Set.count |> (=) 2)
       let! actorOpt = nextActor actedPls
       do!
