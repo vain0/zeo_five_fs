@@ -58,6 +58,7 @@ module Broadcaster =
           printfn "Draw."
     in
       obs
+      |> Observable.duplicateFirst  // duplicate `EvGameBegin` event
       |> Observable.pairwise
       |> Observable.map (fun ((g, _), (g', ev)) -> (g, g', ev))
       |> Observable.subscribe f
