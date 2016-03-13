@@ -4,138 +4,196 @@ open System
 open ZeoFive.Core
 
 module Game =
-  let doGameEndEvent r (g: Game) =
-    cont {
-      do g |> Game.happen (EvGameEnd r)
-      return! g.EndCont r
+  let happen ev =
+    stcont {
+      let! g = StateCont.get
+      do g.ObsSource.Next(g, ev)
     }
 
-  let doSummonEvent cardId g =
-    cont {
-      let g =
-        g
-        |> Game.updateDohyo (fst cardId) cardId
-        |> Game.updateHand (fst cardId) (List.filter ((<>) cardId))
-      do
-        g |> Game.happen (EvSummon (cardId))
-      return g
+  let getPlayer plId =
+    stcont {
+      let! g = StateCont.get
+      return g |> Game.player plId
     }
 
-  let doSummonSelectEvent plId (g: Game) =
-    cont {
+  let getCard cardId =
+    stcont {
+      let! g = StateCont.get
+      return g |> Game.card cardId
+    }
+
+  let getDohyoCard plId =
+    stcont {
+      let! g = StateCont.get
+      return g |> Game.tryDohyoCard plId |> Option.get
+    }
+
+  let getDohyoCards: GameMonad<Set<CardId>> =
+    stcont {
+      let! g = StateCont.get
+      return g |> Game.dohyoCards
+    }
+
+  let getState plId =
+    stcont {
+      let! g = StateCont.get
+      return g |> Game.state plId
+    }
+
+  let updatePlayer pl =
+    stcont {
+      let! g = StateCont.get
+      let playerStore =
+        g.PlayerStore |> Map.add (pl.PlayerId) pl
+      let g = { g with PlayerStore = playerStore }
+      return! StateCont.put g
+    }
+
+  let updateDohyo cardId =
+    stcont {
+      let plId = fst cardId
+      let! g = StateCont.get
+      let! pl = getPlayer plId
+      let  pl = { pl with Dohyo = Some cardId }
+      return! updatePlayer pl
+    }
+
+  let updateHand plId f =
+    stcont {
+      let! pl = getPlayer plId
+      let pl = { pl with Hand = (pl.Hand |> f) }
+      return! updatePlayer pl
+    }
+
+  let updateCard card =
+    stcont {
+      let! g = StateCont.get
+      let cardStore =
+        g.CardStore |> Map.add (card.CardId) card
+      let g = { g with CardStore = cardStore }
+      return! StateCont.put g
+    }
+
+  let doGameEndEvent r =
+    stcont {
+      do! happen (EvGameEnd r)
+      let! g = StateCont.get
+      return! StateCont.liftCont (g.EndCont r)
+    }
+
+  let doSummonEvent cardId =
+    stcont {
+      do! updateDohyo cardId
+      do! updateHand (fst cardId) (List.filter ((<>) cardId))
+      do! happen (EvSummon (cardId))
+    }
+
+  let doSummonSelectEvent plId =
+    stcont {
+      let! pl = getPlayer plId
       // 全滅判定
-      if (g |> Game.player plId).Hand |> List.isEmpty
-      then
-        return! g |> doGameEndEvent (plId |> Player.inverse |> Win)
+      if pl.Hand |> List.isEmpty then
+        return! doGameEndEvent (plId |> Player.inverse |> Win)
       else
-        let brain     = (g |> Game.player plId).Brain
-        let state     =  g |> Game.state plId
+        let brain     = pl.Brain
+        let! state    = getState plId
         let cardId    = brain.Summon(state)
-        do assert (g |> Game.card cardId |> Card.owner |> (=) plId)
-        return! g |> doSummonEvent cardId
+        let! card     = getCard cardId
+        do assert (card |> Card.owner |> (=) plId)
+        return! doSummonEvent cardId
     }
 
-  let nextActor actedPls (g: Game) =
-      g
-      |> Game.dohyoCards
-      |> Set.toList
-      |> List.filter (fun (plId, _) ->
-          actedPls |> Set.contains plId |> not
-          )
-      |> List.tryMaxBy
-          (fun cardId -> (g |> Game.card cardId).Spec.Spd)
-      |> Option.map fst
+  let nextActor actedPls =
+    stcont {
+      let! dohyoCards = getDohyoCards
+      let! g = StateCont.get
+      return
+        dohyoCards
+        |> Set.toList
+        |> List.filter (fun (plId, _) ->
+            actedPls |> Set.contains plId |> not
+            )
+        |> List.tryMaxBy
+            (fun cardId -> (g |> Game.card cardId).Spec.Spd)
+        |> Option.map fst
+    }
 
-  let attackSelect plId (g: Game) =
-    let attacker =
-      g |> Game.tryDohyoCard plId |> Option.get
-    let attackWay =
+  let attackSelect plId =
+    stcont {
+      let! attacker = getDohyoCard plId
+      let! pl       = getPlayer plId
       match attacker.PrevWay with
       | Some prev ->
-          prev |> AttackWay.inverse
+          return prev |> AttackWay.inverse
       | None ->
-        let brain = (g |> Game.player plId).Brain
-        in
-          brain.Attack(g |> Game.state plId)
-    in
-      (g, attackWay)
-
-  let doDieEvent cardId g =
-    cont {
-      do g |> Game.happen (EvDie cardId)
-      let! g =
-        g |> doSummonSelectEvent (fst cardId)
-      return g
+          let brain   = pl.Brain
+          let! state  = getState plId
+          return brain.Attack(state)
     }
 
-  let doDamageEvent restartCombat (cardId, amount) (g: Game) =
-    cont {
-      let card    = g |> Game.card cardId
+  let doDieEvent cardId =
+    stcont {
+      do! happen (EvDie cardId)
+      return! doSummonSelectEvent (fst cardId)
+    }
+
+  let doDamageEvent restartCombat (cardId, amount) =
+    stcont {
+      let! card   = getCard cardId
       let card    = { card with Damage = card.Damage + amount }
-      let g       = g |> Game.updateCard cardId card
-      do g |> Game.happen (EvDamage (cardId, amount))
+      do! updateCard card
+      do! happen (EvDamage (cardId, amount))
 
       // 死亡判定
-      if (card |> Card.curHp) <= 0
-      then
-        let! g = g |> doDieEvent cardId
-        return! restartCombat g
-      else
-        return g
+      if (card |> Card.curHp) <= 0 then
+        return! doDieEvent cardId
     }
 
-  let doAttackSelectEvent plId g =
-    cont {
-      let (g, attackWay) =
-        g |> attackSelect plId
-      let attacker =
-        g |> Game.tryDohyoCard plId |> Option.get
-      let g =
-        g
-        |> Game.updateCard
-            attacker.CardId
-            { attacker with PrevWay = Some attackWay }
-      do g |> Game.happen (EvAttackSelect (plId, attackWay))
-      return (g, attackWay)
+  let doAttackSelectEvent plId =
+    stcont {
+      let! attackWay  = attackSelect plId
+      let! attacker   = getDohyoCard plId
+      do! updateCard { attacker with PrevWay = Some attackWay }
+      do! happen (EvAttackSelect (plId, attackWay))
+      return attackWay
     }
 
-  let doAttackEvent restartCombat (plId, attackWay) g =
-    cont {
+  let doAttackEvent restartCombat (plId, attackWay) =
+    stcont {
       let plTarget  = plId |> Player.inverse
-      let attacker  = g |> Game.tryDohyoCard plId     |> Option.get
-      let target    = g |> Game.tryDohyoCard plTarget |> Option.get
+      let! attacker = getDohyoCard plId
+      let! target   = getDohyoCard plTarget
       let amount    =
         attacker
         |> Card.power attackWay
         |> min (target |> Card.curHp)
-      let! g =
-        g |> doDamageEvent restartCombat (target.CardId, amount)
-      return g
+      return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
-  let rec doCombatEvent actedPls g =
-    cont {
-      do assert (g |> Game.dohyoCards |> Set.count |> (=) 2)
-      let! g =
-        match g |> nextActor actedPls with
+  let rec doCombatEvent actedPls: GameMonad<unit> =
+    stcont {
+      let! dohyoCards = getDohyoCards
+      do assert (dohyoCards |> Set.count |> (=) 2)
+      let! actorOpt = nextActor actedPls
+      do!
+        match actorOpt with
         | None ->
-            cont { return g }
+            stcont { return () }
         | Some actor ->
-            Cont.callCC (fun restartCombat -> cont {
-              let! (g, attackWay) =
-                g |> doAttackSelectEvent actor
-              let! g =
-                g |> doAttackEvent restartCombat (actor, attackWay)
-              return! g |> doCombatEvent (actedPls |> Set.add actor)
-            })
-      return! g |> doCombatEvent (Set.empty)
+            StateCont.callCC (fun restartCombat -> stcont {
+              let! attackWay = doAttackSelectEvent actor
+              do! doAttackEvent restartCombat (actor, attackWay)
+              return! doCombatEvent (actedPls |> Set.add actor)
+              })
+      // repeat forever (``Game.EndCont`` is called to end game)
+      return! doCombatEvent (Set.empty)
     }
 
-  let startGame g =
-    cont {
-      let! g = g |> doSummonSelectEvent Player1
-      let! g = g |> doSummonSelectEvent Player2
-      let! g = g |> doCombatEvent Set.empty
+  let startGame =
+    stcont {
+      do! doSummonSelectEvent Player1
+      do! doSummonSelectEvent Player2
+      do! doCombatEvent Set.empty
       return Draw  // dummy (combat continues forever)
     }
 
@@ -147,7 +205,8 @@ module Game =
       let disposables =  // dispose されない
         audience
         |> List.map (fun au -> au g.ObsSource.AsObservable)
-      return! g |> startGame
+      let! (r, g) = StateT.run startGame g
+      return r
       //do disposables |> List.iter (fun (disp: IDisposable) -> disp.Dispose())
     })
     |> Cont.run
