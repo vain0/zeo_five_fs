@@ -98,9 +98,6 @@ module Types =
       ObsSource   : Observable.Source<Game * Event>
     }
 
-  type GameMonad<'a> =
-    StateT<Game, Cont<GameResult, 'a * Game>>
-
   type Entrant =
     {
       Name    : string
