@@ -100,6 +100,7 @@ module Game =
         let cardId    = brain.Summon(state)
         let! card     = getCard cardId
         do assert (card |> Card.owner |> (=) plId)
+        do! happen (EvSummonSelect cardId)
         return! doSummonEvent cardId
     }
 
@@ -167,6 +168,7 @@ module Game =
         attacker
         |> Card.power attackWay
         |> min (target |> Card.curHp)
+      do! happen (EvAttack plId)
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
@@ -183,6 +185,7 @@ module Game =
             StateCont.callCC (fun restartCombat -> stcont {
               let! attackWay = doAttackSelectEvent actor
               do! doAttackEvent restartCombat (actor, attackWay)
+              do! happen (EvCombat actedPls)
               return! doCombatEvent (actedPls |> Set.add actor)
               })
       // repeat forever (``Game.EndGame`` is called to end game)
@@ -191,6 +194,7 @@ module Game =
 
   let startGame =
     stcont {
+      do! happen (EvGameBegin)
       do! doSummonSelectEvent Player1
       do! doSummonSelectEvent Player2
       do! doCombatEvent Set.empty

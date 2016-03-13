@@ -51,7 +51,7 @@ module Types =
     | Draw
 
   type Event =
-    | EvSummonSelect  of PlayerId
+    | EvSummonSelect  of CardId
     | EvSummon        of CardId
     | EvCombat        of Set<PlayerId>
     | EvAttackSelect  of PlayerId * AttackWay
