@@ -10,8 +10,8 @@ module Broadcaster =
           ()
 
       | EvSummon cardId ->
-          let card = g |> UpdateCont.eval (Game.getCard cardId)
-          let pl   = g |> UpdateCont.eval (Game.getPlayer (card |> Card.owner))
+          let card = g' |> UpdateCont.eval (Game.getCard cardId)
+          let pl   = g' |> UpdateCont.eval (Game.getPlayer (card |> Card.owner))
           do
             printfn "Player %s summoned %s."
               (pl.Name) (card.Spec.Name)
@@ -20,7 +20,7 @@ module Broadcaster =
           ()
 
       | EvAttackSelect (pl, way) ->
-          let card = g |> UpdateCont.eval (Game.getDohyoCard pl)
+          let card = g' |> UpdateCont.eval (Game.getDohyoCard pl)
           do
             printfn "%s attacked with %A."
               (card.Spec.Name) way
