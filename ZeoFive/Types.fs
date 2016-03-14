@@ -53,9 +53,9 @@ module Types =
   type Event =
     | EvSummonSelect  of CardId
     | EvSummon        of CardId
-    | EvCombat        of Set<PlayerId>
+    | EvCombat        of Map<PlayerId, AttackWay>
     | EvAttackSelect  of PlayerId * AttackWay
-    | EvAttack        of PlayerId
+    | EvAttack        of PlayerId * AttackWay
     | EvDamage        of CardId * int
     | EvDie           of CardId
     | EvGameBegin

@@ -2,6 +2,8 @@
 
 open System
 
+#nowarn "40"
+
 module Game =
   let init endGame ent1 ent2 =
     let deckInit plId (ent: Entrant) =
@@ -82,6 +84,9 @@ module Game =
               UpdatePlayer pl |> applyAtom g
       in
         us |> List.fold applyAtom g
+
+    static member Sum(us) =
+      us |> Seq.fold (fun u1 u2 -> Update.Combine(u1, u2)) (Update.Unit)
 
   type GameMonad<'T, 'R> =
     UpdateT<Game, Cont<'R, Update * 'T>>
@@ -183,21 +188,34 @@ module Game =
 
   let doSummonSelectEvent plId =
     upcont {
-      let! pl = getPlayer plId
-      // 全滅判定
-      if pl.Hand |> List.isEmpty then
-        return! doGameEndEvent (plId |> Player.inverse |> Win)
-      else
-        let brain     = pl.Brain
-        let! state    = getState plId
-        let cardId    = brain.Summon(state)
-        let! card     = getCard cardId
-        do assert (card |> Card.owner |> (=) plId)
-        do! happen (EvSummonSelect cardId)
-        return! doSummonEvent cardId
+      let! pl       = getPlayer plId
+      let brain     = pl.Brain
+      let! state    = getState plId
+      do assert (state.Player.Hand |> List.isEmpty |> not)
+
+      let cardId    = brain.Summon(state)
+      let! card     = getCard cardId
+      do assert (card |> Card.owner |> (=) plId)
+      do! happen (EvSummonSelect cardId)
+      return cardId
     }
 
-  let nextActor actedPls =
+  let doBeginningSummonEvent: GameMonad<_, _> =
+    upcont {
+      let! g = UpdateT.get ()
+      let cardIds =
+        Player.allIds
+        |> List.map (fun plId -> async {
+              return
+                UpdateCont.eval (doSummonSelectEvent plId) g
+            })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+      for cardId in cardIds do
+        do! doSummonEvent cardId
+    }
+
+  let nextActor q =
     upcont {
       let! dohyoCards = getDohyoCards ()
       let! g = UpdateT.get ()
@@ -205,7 +223,7 @@ module Game =
         dohyoCards
         |> Set.toList
         |> List.filter (fun (plId, _) ->
-            actedPls |> Set.contains plId |> not
+            q |> Map.containsKey plId
             )
         |> List.tryMaxBy
             (fun cardId ->
@@ -231,7 +249,16 @@ module Game =
   let doDieEvent cardId =
     upcont {
       do! happen (EvDie cardId)
-      return! doSummonSelectEvent (fst cardId)
+
+      let plId    = fst cardId
+      let! pl     = getPlayer plId
+
+      // 全滅判定
+      if pl.Hand |> List.isEmpty then
+        return! doGameEndEvent (plId |> Player.inverse |> Win)
+      else
+        let! cardId = doSummonSelectEvent plId
+        return! doSummonEvent cardId
     }
 
   let doDamageEvent restartCombat (cardId, amount) =
@@ -265,36 +292,54 @@ module Game =
         attacker
         |> Card.power attackWay
         |> min (target |> Card.curHp)
-      do! happen (EvAttack plId)
+      do! happen (EvAttack (plId, attackWay))
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
-  let rec doCombatEvent actedPls =
+  /// q: A map of PlayerIds whose card hasn't attacked yet during this combat
+  let rec doCombatEvent q =
     upcont {
       let! dohyoCards = getDohyoCards ()
       do assert (dohyoCards |> Set.count |> (=) 2)
-      let! actorOpt = nextActor actedPls
+      let! actorOpt = nextActor q
       do!
         match actorOpt with
         | None ->
             upcont { return () }
         | Some actor ->
             UpdateCont.callCC (fun restartCombat -> upcont {
-              let! attackWay = doAttackSelectEvent actor
+              let attackWay = q |> Map.find actor
               do! doAttackEvent restartCombat (actor, attackWay)
-              do! happen (EvCombat actedPls)
-              return! doCombatEvent (actedPls |> Set.add actor)
+              do! happen (EvCombat q)
+              return! doCombatEvent (q |> Map.remove actor)
               })
       // repeat forever (``Game.EndGame`` is called to end game)
-      return! doCombatEvent (Set.empty)
+      return! beginCombat
+    }
+
+  and beginCombat =
+    upcont {
+      let! g = UpdateT.get ()
+      let (q, us) =
+        Player.allIds
+        |> List.map (fun plId -> async {
+            let (u, attackWay) =
+              g |> UpdateCont.setRunThen id (doAttackSelectEvent plId)
+            return ((plId, attackWay), u)
+            })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+        |> Array.unzip
+      do! UpdateT.update (us |> Update.Sum)
+      let q = q |> Map.ofArray
+      return! doCombatEvent q
     }
 
   let startGame =
     upcont {
       do! happen (EvGameBegin)
-      do! doSummonSelectEvent Player1
-      do! doSummonSelectEvent Player2
-      do! doCombatEvent Set.empty
+      do! doBeginningSummonEvent
+      do! beginCombat
       return Draw  // dummy (combat continues forever)
     }
 

@@ -33,6 +33,9 @@ module Card =
     card.CardId |> fst
 
 module Player =
+  let allIds =
+    [Player1; Player2]
+
   let inverse =
     function
     | Player1 -> Player2
