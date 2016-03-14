@@ -212,7 +212,7 @@ module Game =
         do! doSummonEvent cardId
     }
 
-  let nextActor actedPls =
+  let nextActor q =
     upcont {
       let! dohyoCards = getDohyoCards ()
       let! g = UpdateT.get ()
@@ -220,7 +220,7 @@ module Game =
         dohyoCards
         |> Set.toList
         |> List.filter (fun (plId, _) ->
-            actedPls |> Set.contains plId |> not
+            q |> Set.contains plId
             )
         |> List.tryMaxBy
             (fun cardId ->
@@ -293,11 +293,12 @@ module Game =
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
-  let rec doCombatEvent actedPls =
+  /// q: A set of PlayerIds whose card hasn't attacked yet during this combat
+  let rec doCombatEvent q =
     upcont {
       let! dohyoCards = getDohyoCards ()
       do assert (dohyoCards |> Set.count |> (=) 2)
-      let! actorOpt = nextActor actedPls
+      let! actorOpt = nextActor q
       do!
         match actorOpt with
         | None ->
@@ -306,8 +307,8 @@ module Game =
             UpdateCont.callCC (fun restartCombat -> upcont {
               let! attackWay = doAttackSelectEvent actor
               do! doAttackEvent restartCombat (actor, attackWay)
-              do! happen (EvCombat actedPls)
-              return! doCombatEvent (actedPls |> Set.add actor)
+              do! happen (EvCombat q)
+              return! doCombatEvent (q |> Set.remove actor)
               })
       // repeat forever (``Game.EndGame`` is called to end game)
       return! beginCombat
@@ -315,7 +316,7 @@ module Game =
 
   and beginCombat =
     upcont {
-      return! doCombatEvent Set.empty
+      return! doCombatEvent ([Player1; Player2] |> Set.ofList)
     }
 
   let startGame =
