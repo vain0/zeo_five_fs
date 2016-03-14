@@ -201,7 +201,7 @@ module Game =
     upcont {
       let! g = UpdateT.get ()
       let cardIds =
-        [Player1; Player2]
+        Player.allIds
         |> List.map (fun plId -> async {
               return
                 UpdateCont.eval (doSummonSelectEvent plId) g
@@ -316,7 +316,7 @@ module Game =
 
   and beginCombat =
     upcont {
-      return! doCombatEvent ([Player1; Player2] |> Set.ofList)
+      return! doCombatEvent (Player.allIds |> Set.ofList)
     }
 
   let startGame =
