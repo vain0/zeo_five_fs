@@ -322,14 +322,16 @@ module Game =
       let! g = UpdateT.get ()
       let (q, us) =
         Player.allIds
-        |> List.map (fun plId ->
+        |> List.map (fun plId -> async {
             let (u, attackWay) =
               g |> UpdateCont.setRunThen id (doAttackSelectEvent plId)
-            in ((plId, attackWay), u)
-            )
-        |> List.unzip
+            return ((plId, attackWay), u)
+            })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+        |> Array.unzip
       do! UpdateT.update (us |> Update.Sum)
-      let q = q |> Map.ofList
+      let q = q |> Map.ofArray
       return! doCombatEvent q
     }
 
