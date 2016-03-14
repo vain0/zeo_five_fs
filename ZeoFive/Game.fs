@@ -195,6 +195,21 @@ module Game =
       return cardId
     }
 
+  let doBeginningSummonEvent: GameMonad<_, _> =
+    upcont {
+      let! g = UpdateT.get ()
+      let cardIds =
+        [Player1; Player2]
+        |> List.map (fun plId -> async {
+              return
+                UpdateCont.eval (doSummonSelectEvent plId) g
+            })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+      for cardId in cardIds do
+        do! doSummonEvent cardId
+    }
+
   let nextActor actedPls =
     upcont {
       let! dohyoCards = getDohyoCards ()
@@ -299,13 +314,7 @@ module Game =
   let startGame =
     upcont {
       do! happen (EvGameBegin)
-      let summon plId =
-        upcont {
-          let! cardId = doSummonSelectEvent plId
-          return! doSummonEvent cardId
-        }
-      do! summon Player1
-      do! summon Player2
+      do! doBeginningSummonEvent
       do! doCombatEvent Set.empty
       return Draw  // dummy (combat continues forever)
     }
