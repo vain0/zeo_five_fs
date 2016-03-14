@@ -85,6 +85,9 @@ module Game =
       in
         us |> List.fold applyAtom g
 
+    static member Sum(us) =
+      us |> Seq.fold (fun u1 u2 -> Update.Combine(u1, u2)) (Update.Unit)
+
   type GameMonad<'T, 'R> =
     UpdateT<Game, Cont<'R, Update * 'T>>
 
