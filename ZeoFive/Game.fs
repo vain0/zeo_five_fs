@@ -223,7 +223,7 @@ module Game =
         dohyoCards
         |> Set.toList
         |> List.filter (fun (plId, _) ->
-            q |> Set.contains plId
+            q |> Map.containsKey plId
             )
         |> List.tryMaxBy
             (fun cardId ->
@@ -296,7 +296,7 @@ module Game =
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
-  /// q: A set of PlayerIds whose card hasn't attacked yet during this combat
+  /// q: A map of PlayerIds whose card hasn't attacked yet during this combat
   let rec doCombatEvent q =
     upcont {
       let! dohyoCards = getDohyoCards ()
@@ -308,10 +308,10 @@ module Game =
             upcont { return () }
         | Some actor ->
             UpdateCont.callCC (fun restartCombat -> upcont {
-              let! attackWay = doAttackSelectEvent actor
+              let attackWay = q |> Map.find actor
               do! doAttackEvent restartCombat (actor, attackWay)
               do! happen (EvCombat q)
-              return! doCombatEvent (q |> Set.remove actor)
+              return! doCombatEvent (q |> Map.remove actor)
               })
       // repeat forever (``Game.EndGame`` is called to end game)
       return! beginCombat
@@ -319,7 +319,18 @@ module Game =
 
   and beginCombat =
     upcont {
-      return! doCombatEvent (Player.allIds |> Set.ofList)
+      let! g = UpdateT.get ()
+      let (q, us) =
+        Player.allIds
+        |> List.map (fun plId ->
+            let (u, attackWay) =
+              g |> UpdateCont.setRunThen id (doAttackSelectEvent plId)
+            in ((plId, attackWay), u)
+            )
+        |> List.unzip
+      do! UpdateT.update (us |> Update.Sum)
+      let q = q |> Map.ofList
+      return! doCombatEvent q
     }
 
   let startGame =
