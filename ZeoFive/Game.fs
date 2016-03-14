@@ -2,6 +2,8 @@
 
 open System
 
+#nowarn "40"
+
 module Game =
   let init endGame ent1 ent2 =
     let deckInit plId (ent: Entrant) =
@@ -308,14 +310,19 @@ module Game =
               return! doCombatEvent (actedPls |> Set.add actor)
               })
       // repeat forever (``Game.EndGame`` is called to end game)
-      return! doCombatEvent (Set.empty)
+      return! beginCombat
+    }
+
+  and beginCombat =
+    upcont {
+      return! doCombatEvent Set.empty
     }
 
   let startGame =
     upcont {
       do! happen (EvGameBegin)
       do! doBeginningSummonEvent
-      do! doCombatEvent Set.empty
+      do! beginCombat
       return Draw  // dummy (combat continues forever)
     }
 
