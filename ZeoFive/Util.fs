@@ -92,49 +92,6 @@ module Cont =
 module ContMonadSyntax =
   let cont = Cont.ContBuilder()
 
-type StateT<'s, 'm> =
-  | StateT of ('s -> 'm)
-
-[<RequireQualifiedAccess>]
-module StateT =
-  let run (StateT x) = x
-
-[<RequireQualifiedAccess>]
-module StateCont =
-  let result x =
-    StateT (fun s -> Cont.result (x, s))
-
-  let bind f (StateT m) =
-    StateT (fun s -> Cont.bind (fun (a, s') -> StateT.run (f a) s') (m s))
-
-  let liftCont m =
-    StateT (fun s -> Cont.bind (fun a -> Cont.result (a, s)) m)
-
-  let get   = StateT (fun s -> Cont.result (s, s))
-  let put s = StateT (fun _ -> Cont.result ((), s))
-
-  let callCC f =
-    StateT (fun s -> Cont.callCC (fun cc -> StateT.run (f cc) s))
-
-  let eval m s =
-    Cont.run (StateT.run m s) fst
-
-  let exec m s =
-    Cont.run (StateT.run m s) snd
-
-  type StateContBuilder () =
-    member this.Run(f) = f ()
-    member this.Delay(f) = f
-    member this.Zero() = result ()
-    member this.Return(x) = result x
-    member this.ReturnFrom(m) = m
-    member this.Bind(x, f) = bind f x
-    member this.Combine(x, k) = x; k ()
-
-[<AutoOpen>]
-module StateContSyntax =
-  let stcont = StateCont.StateContBuilder()
-
 type UpdateT<'TState, '``Monad (TUpdate * 'T)``> =
   | UpdateT of ('TState -> '``Monad (TUpdate * 'T)``)
 
