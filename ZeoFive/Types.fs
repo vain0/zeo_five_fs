@@ -55,7 +55,7 @@ module Types =
     | EvSummon        of CardId
     | EvCombat        of Set<PlayerId>
     | EvAttackSelect  of PlayerId * AttackWay
-    | EvAttack        of PlayerId
+    | EvAttack        of PlayerId * AttackWay
     | EvDamage        of CardId * int
     | EvDie           of CardId
     | EvGameBegin

@@ -20,13 +20,13 @@ module Broadcaster =
           ()
 
       | EvAttackSelect (pl, way) ->
+          ()
+
+      | EvAttack (pl, way) ->
           let card = g' |> UpdateCont.eval (Game.getDohyoCard pl)
           do
             printfn "%s attacked with %A."
               (card.Spec.Name) way
-
-      | EvAttack pl ->
-          ()
 
       | EvDamage (cardId, amount) ->
           let card  = g  |> UpdateCont.eval (Game.getCard cardId)

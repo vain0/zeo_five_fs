@@ -287,7 +287,7 @@ module Game =
         attacker
         |> Card.power attackWay
         |> min (target |> Card.curHp)
-      do! happen (EvAttack plId)
+      do! happen (EvAttack (plId, attackWay))
       return! doDamageEvent restartCombat (target.CardId, amount)
     }
 
