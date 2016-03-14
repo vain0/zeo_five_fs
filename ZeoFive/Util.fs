@@ -135,11 +135,11 @@ module UpdateCont =
   let callCC f =
     UpdateT (fun s -> Cont.callCC (fun cc -> UpdateT.run (f cc) s))
 
-  let eval m s =
-    Cont.run (UpdateT.run m s) snd
+  let inline setRunThen k m s =
+    Cont.run (UpdateT.run m s) k
 
-  let inline exec m s =
-    Cont.run (UpdateT.run m s) (fun (u, _) -> UpdateT.apply s u)
+  let inline eval m s = (m, s) ||> setRunThen snd
+  let inline exec m s = (m, s) ||> setRunThen (fun (u, _) -> UpdateT.apply s u)
 
   type UpdateContBuilder() =
     member inline this.Zero() = result ()
