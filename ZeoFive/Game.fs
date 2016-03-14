@@ -183,18 +183,16 @@ module Game =
 
   let doSummonSelectEvent plId =
     upcont {
-      let! pl = getPlayer plId
-      // 全滅判定
-      if pl.Hand |> List.isEmpty then
-        return! doGameEndEvent (plId |> Player.inverse |> Win)
-      else
-        let brain     = pl.Brain
-        let! state    = getState plId
-        let cardId    = brain.Summon(state)
-        let! card     = getCard cardId
-        do assert (card |> Card.owner |> (=) plId)
-        do! happen (EvSummonSelect cardId)
-        return! doSummonEvent cardId
+      let! pl       = getPlayer plId
+      let brain     = pl.Brain
+      let! state    = getState plId
+      do assert (state.Player.Hand |> List.isEmpty |> not)
+
+      let cardId    = brain.Summon(state)
+      let! card     = getCard cardId
+      do assert (card |> Card.owner |> (=) plId)
+      do! happen (EvSummonSelect cardId)
+      return cardId
     }
 
   let nextActor actedPls =
@@ -231,7 +229,16 @@ module Game =
   let doDieEvent cardId =
     upcont {
       do! happen (EvDie cardId)
-      return! doSummonSelectEvent (fst cardId)
+
+      let plId    = fst cardId
+      let! pl     = getPlayer plId
+
+      // 全滅判定
+      if pl.Hand |> List.isEmpty then
+        return! doGameEndEvent (plId |> Player.inverse |> Win)
+      else
+        let! cardId = doSummonSelectEvent plId
+        return! doSummonEvent cardId
     }
 
   let doDamageEvent restartCombat (cardId, amount) =
@@ -292,8 +299,13 @@ module Game =
   let startGame =
     upcont {
       do! happen (EvGameBegin)
-      do! doSummonSelectEvent Player1
-      do! doSummonSelectEvent Player2
+      let summon plId =
+        upcont {
+          let! cardId = doSummonSelectEvent plId
+          return! doSummonEvent cardId
+        }
+      do! summon Player1
+      do! summon Player2
       do! doCombatEvent Set.empty
       return Draw  // dummy (combat continues forever)
     }
