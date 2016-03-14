@@ -2,6 +2,7 @@
 module Util
 
 open System
+open System.Collections.Generic
 
 [<AutoOpen>]
 module Misc =
@@ -91,48 +92,90 @@ module Cont =
 module ContMonadSyntax =
   let cont = Cont.ContBuilder()
 
-type StateT<'s, 'm> =
-  | StateT of ('s -> 'm)
+type UpdateT<'TState, '``Monad (TUpdate * 'T)``> =
+  | UpdateT of ('TState -> '``Monad (TUpdate * 'T)``)
+
+module UpdateT =
+  open System.Collections.Generic
+
+  let inline unit< ^S when ^S: (static member Unit: ^S)> (): ^S =
+    (^S : (static member Unit: ^S) ())
+
+  let inline combine< ^S when ^S: (static member Combine: ^S * ^S -> ^S )> a b: ^S =
+    (^S : (static member Combine: ^S * ^S -> ^S) (a, b))
+
+  let inline apply< ^S, ^U when ^U : (static member Apply: ^S * ^U -> ^S )> s a: ^S =
+    (^U : (static member Apply: ^S * ^U -> ^S) (s, a))
+
+  let run (UpdateT x) = x
+
+  let inline get ()   = UpdateT (fun s -> Cont.result (unit (), s))
+  let inline update u = UpdateT (fun _ -> Cont.result (u, ()))
 
 [<RequireQualifiedAccess>]
-module StateT =
-  let run (StateT x) = x
+module UpdateCont =
+  let inline result x =
+    UpdateT (fun _ -> cont {
+      return (UpdateT.unit (), x)
+      })
 
-[<RequireQualifiedAccess>]
-module StateCont =
-  let result x =
-    StateT (fun s -> Cont.result (x, s))
+  let inline bind f m =
+    UpdateT (fun s -> cont {
+      let! (u1, x) = UpdateT.run m s
+      let! (u2, y) = UpdateT.run (f x) (UpdateT.apply s u1)
+      return (UpdateT.combine u1 u2, y)
+      })
 
-  let bind f (StateT m) =
-    StateT (fun s -> Cont.bind (fun (a, s') -> StateT.run (f a) s') (m s))
-
-  let liftCont m =
-    StateT (fun s -> Cont.bind (fun a -> Cont.result (a, s)) m)
-
-  let get   = StateT (fun s -> Cont.result (s, s))
-  let put s = StateT (fun _ -> Cont.result ((), s))
+  let inline liftCont m =
+    UpdateT (fun _ -> cont {
+      let! x = m
+      return (UpdateT.unit (), x)
+      })
 
   let callCC f =
-    StateT (fun s -> Cont.callCC (fun cc -> StateT.run (f cc) s))
+    UpdateT (fun s -> Cont.callCC (fun cc -> UpdateT.run (f cc) s))
 
   let eval m s =
-    Cont.run (StateT.run m s) fst
+    Cont.run (UpdateT.run m s) snd
 
-  let exec m s =
-    Cont.run (StateT.run m s) snd
+  let inline exec m s =
+    Cont.run (UpdateT.run m s) (fun (u, _) -> UpdateT.apply s u)
 
-  type StateContBuilder () =
-    member this.Run(f) = f ()
-    member this.Delay(f) = f
-    member this.Zero() = result ()
-    member this.Return(x) = result x
-    member this.ReturnFrom(m) = m
-    member this.Bind(x, f) = bind f x
-    member this.Combine(x, k) = x; k ()
+  type UpdateContBuilder() =
+    member inline this.Zero() = result ()
+    member inline this.Return(x) = result x
+    member inline this.ReturnFrom(m) = m
+
+    member inline this.Bind(x, f) = bind f x
+
+    member inline this.Delay(f) = this.Bind(this.Zero(), f)
+
+    member inline this.Combine(c1, c2) = this.Bind(c1, fun () -> c2)
+
+    member inline this.Using(r, f) =
+      let body s =
+        use rr = r
+        in UpdateT.run (f rr) s
+      in UpdateT body
+
+    member inline this.For(sq: seq<'V>, f) = 
+      let rec loop (en: IEnumerator<_>) = 
+        if en.MoveNext()
+        then this.Bind(f en.Current, fun _ -> loop en)
+        else this.Zero()
+      in
+        this.Using(sq.GetEnumerator(), loop)
+
+    member inline this.While(t, f) =
+      let rec loop () = 
+        if t ()
+        then this.Bind(f(), loop)
+        else this.Zero()
+      in loop ()
 
 [<AutoOpen>]
-module StateContSyntax =
-  let stcont = StateCont.StateContBuilder()
+module UpdateContMonadSyntax =
+  let upcont = UpdateCont.UpdateContBuilder()
 
 [<RequireQualifiedAccess>]
 module Observable =
