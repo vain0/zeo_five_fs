@@ -6,6 +6,16 @@ module NPCardId =
   let indexed =
     T5.zip (0, 1, 2, 3, 4) all |> T5.toList
 
+module CardSpec =
+  let statusNameList =
+    ["HP"; "SPD"; "ATK"; "ITL"]
+
+  let statusList (self: CardSpec) =
+    [self.Hp; self.Spd; self.Atk; self.Itl]
+
+  let statusTotal (self: CardSpec) =
+    self |> statusList |> List.sum
+
 module Card =
   let init cardId spec =
     {
