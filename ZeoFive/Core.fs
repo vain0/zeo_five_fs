@@ -32,6 +32,13 @@ module Card =
   let owner (card: Card) =
     card.CardId |> fst
 
+module Deck =
+  let toJson self =
+    Serialize.serializeJson<Deck>(self)
+
+  let ofJson json =
+    Serialize.deserializeJson<Deck>(json)
+
 module Player =
   let allIds =
     [Player1; Player2]
