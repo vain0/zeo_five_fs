@@ -1,0 +1,5 @@
+
+GITHUB
+  remote: fsprojects/Chessie
+  specs:
+    src/Chessie/ErrorHandling.fs (d957821d60696cd5e8d4c068bbad9406f00680a8)
