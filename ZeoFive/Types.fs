@@ -43,6 +43,9 @@ module Types =
       Cards   : T5<CardSpec>
     }
 
+  type UnvalidatedDeck =
+    | UnvalidatedDeck of Deck
+
   type Hand =
     list<CardId>
 
@@ -104,3 +107,7 @@ module Types =
       Deck    : Deck
       Brain   : IBrain
     }
+
+  type Error =
+    | InvalidStatusTotal of CardSpec
+    | InvalidStatusValue of CardSpec * string * int

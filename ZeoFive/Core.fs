@@ -1,5 +1,7 @@
 ﻿namespace ZeoFive.Core
 
+open Chessie.ErrorHandling
+
 module NPCardId =
   let all = (Card1, Card2, Card3, Card4, Card5)
 
@@ -47,7 +49,40 @@ module Deck =
     Serialize.serializeJson<Deck>(self)
 
   let ofJson json =
-    Serialize.deserializeJson<Deck>(json)
+    Serialize.deserializeJson<Deck>(json) |> UnvalidatedDeck
+
+  let validate (UnvalidatedDeck self) =
+    let validateStatusTotal card =
+      if card |> CardSpec.statusTotal = 200
+      then card |> pass
+      else card |> warn (InvalidStatusTotal card) 
+
+    let validateEachStatus card =
+      [
+        let statusMap =
+          List.zip
+            CardSpec.statusNameList
+            (card |> CardSpec.statusList)
+        for (statusName, status) in statusMap do
+          if status < 0 then
+            yield card |> warn (InvalidStatusValue (card, statusName, status))
+
+        if card.Hp = 0 then
+          yield card |> warn (InvalidStatusValue (card, "HP", 0))
+        ]
+      |> List.toSeq
+      |> Trial.collect
+
+    self.Cards
+    |> T5.toList
+    |> List.map (validateStatusTotal >> Trial.bind validateEachStatus)
+    |> List.toSeq
+    |> Trial.collect
+    |> (function
+        | Pass _        -> self |> ok
+        | Warn (_, msg)
+        | Fail (msg)    -> msg |> Bad
+        )
 
 module Player =
   let allIds =
@@ -93,3 +128,12 @@ module Brain =
 
       member this.Attack(state: GameStateFromPlayer) =
         PhysicalAttack
+
+module Error =
+  let toString =
+    function
+    | InvalidStatusTotal spec ->
+        sprintf "Card status total should be 200 but is %d"
+          (spec |> CardSpec.statusTotal)
+    | InvalidStatusValue (card, statusName, status) ->
+        sprintf "%s value %d is invalid." statusName status
