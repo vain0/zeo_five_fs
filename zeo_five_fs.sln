@@ -10,6 +10,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Cui", "Cui\Cui.fsproj", "{6
 		{ABFF00BA-7437-4C73-AE61-7C32D41C014B} = {ABFF00BA-7437-4C73-AE61-7C32D41C014B}
 	EndProjectSection
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Gui", "Gui\Gui.fsproj", "{1C023647-39E1-47E4-8AC4-480A7992310C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{6E441276-9478-4FE0-A856-026839E772B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6E441276-9478-4FE0-A856-026839E772B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6E441276-9478-4FE0-A856-026839E772B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C023647-39E1-47E4-8AC4-480A7992310C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C023647-39E1-47E4-8AC4-480A7992310C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C023647-39E1-47E4-8AC4-480A7992310C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C023647-39E1-47E4-8AC4-480A7992310C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
