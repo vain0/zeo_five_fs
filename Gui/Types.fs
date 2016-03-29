@@ -17,7 +17,7 @@ module Types =
   type GuiObjType =
     | TitleLogo
     | Background
-    | MyButton    of string
+    | MyButton    of (string * (unit -> unit))
     | Card        of Card
     | CardBack
 
@@ -25,3 +25,6 @@ module Types =
     GuiObjType * Rectangle
 
   let cardSize = new Size(141, 56)
+
+  [<Literal>]
+  let CardFrameWidth = 3

@@ -3,6 +3,7 @@
 open System
 open System.Drawing
 open System.Windows.Forms
+open ZeoFive.Core
 
 module Draw =
   let draw (e: PaintEventArgs) (typ, rect: Rectangle) =
@@ -20,7 +21,7 @@ module Draw =
       | Background ->
           gfx.FillRectangle(backgroundBrush, rect)
 
-      | MyButton text ->
+      | MyButton (text, _) ->
           gfx.FillRectangle
             ( new SolidBrush(Color.DarkGray)
             , new Rectangle(rect.Left + 2, rect.Top + 2, rect.Width, rect.Height)
@@ -33,8 +34,56 @@ module Draw =
             , RectangleF.ofRectangle rect
             )
 
-      | Card cardId ->
-          ()
+      | Card card ->
+          let plId = fst card.CardId
+          do gfx.FillRectangle
+              ( new SolidBrush
+                  (match plId with
+                    | Player1 -> Color.FromArgb(  0, 200, 255)
+                    | Player2 -> Color.FromArgb(200,   0,   0)
+                    )
+              , rect
+              )
+          let nameBoxBackBrush =
+            new SolidBrush
+              (match plId with
+                | Player1 -> Color.FromArgb(175, 238, 255)
+                | Player2 -> Color.FromArgb(255, 120, 120)
+                )
+          let nameBoxRect =
+            Rectangle
+              ( rect.Left + CardFrameWidth
+              , rect.Top  + CardFrameWidth
+              , cardSize.Width - CardFrameWidth * 2
+              , 15
+              )
+          do gfx.FillRectangle(nameBoxBackBrush, nameBoxRect)
+
+          do gfx.DrawString
+              ( card.Spec.Name
+              , yuGothic 10
+              , blackBrush
+              , x = float32 (nameBoxRect.Left)
+              , y = float32 (nameBoxRect.Top)
+              )
+          do
+            CardSpec.statusNameList
+            |> List.zip (card.Spec |> CardSpec.statusList)
+            |> List.iteri (fun i (statusValue, statusName) ->
+                let x =
+                  rect.Left + CardFrameWidth + 4
+                  + (i &&& 1) * 60
+                let y =
+                  nameBoxRect.Bottom + 3
+                  + (i &&& 2) * 7
+                do gfx.DrawString
+                    ( sprintf "%s%4d" statusName statusValue
+                    , yuGothic 10
+                    , blackBrush  // TODO: highlight
+                    , x = float32 x
+                    , y = float32 y
+                    )
+                )
 
       | CardBack ->
           gfx.FillRectangle(new SolidBrush(Color.FromArgb(184, 134, 11)), rect)
@@ -50,4 +99,3 @@ module Draw =
                   , cardSize.Height - d * 2
                   )
               )
-

@@ -2,10 +2,12 @@
 
 open System
 open System.Drawing
+open System.IO
 open System.Windows.Forms
+open Chessie.ErrorHandling
 open ZeoFive.Core
 
-type Main () =
+type Main () as thisForm =
   inherit Form
     ( ClientSize    = Size(640, 480)
     , Text          = "ZeoFive Player"
@@ -26,6 +28,36 @@ type Main () =
       )
   do
     base.Controls.Add(logBox)
+
+  let mutable movePage = (fun newPage -> ())  // defined later
+
+  let openDeck deck =
+    movePage (TitlePage (Some deck))
+
+  let openDeckFile () =
+    let ofd =
+      new OpenFileDialog
+        ( Title         = "デッキを開く"
+        , DefaultExt    = ".zeo_d"
+        )
+    do
+      if ofd.ShowDialog() = DialogResult.OK then
+        trial {
+          let json = File.ReadAllText(ofd.FileName)
+          let! deck = json |> Deck.ofJson |> Deck.validate
+          do openDeck deck
+        }
+        |> (function
+            | Ok _ -> ()
+            | Bad errs ->
+                MessageBox.Show(String.Join(Environment.NewLine, errs)) |> ignore
+            )
+
+  let beginGame () =
+    ()
+
+  let showRule () =
+    ()
 
   let components =
     let bg = 
@@ -60,9 +92,13 @@ type Main () =
 
             // buttons
             yield!
-              ["Open Deck"; "Battle vs. CPU"; "Rule"]
-              |> List.mapi (fun i text ->
-                  ( MyButton text
+              [
+                ("Open Deck"      , openDeckFile  )
+                ("Battle vs. CPU" , beginGame     )
+                ("Rule"           , showRule      )
+              ]
+              |> List.mapi (fun i (text, reaction) ->
+                  ( MyButton (text, reaction)
                   , new Rectangle
                       ( 200 + i * (120 + 10), 170
                       , 120, 30
@@ -79,5 +115,21 @@ type Main () =
   let mutable curComponents =
     curPage |> components
 
+  do movePage <- (fun newPage ->
+      curPage <- newPage
+      curComponents <- curPage |> components
+      thisForm.Refresh()
+      )
+
   override this.OnPaint(e) =
     curComponents |> List.iter (Draw.draw e)
+
+  override this.OnMouseClick(e) =
+    curComponents
+    |> List.iter (fun ((typ, rect) as it) ->
+      if rect.Contains(e.Location) then
+        match typ with
+        | MyButton (_, reaction) ->
+            reaction ()
+        | _ -> ()
+      )
