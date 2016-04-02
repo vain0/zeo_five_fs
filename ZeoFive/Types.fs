@@ -43,6 +43,9 @@ module Types =
       Cards   : T5<CardSpec>
     }
 
+  type UnvalidatedDeck =
+    | UnvalidatedDeck of Deck
+
   type Hand =
     list<CardId>
 
@@ -53,9 +56,9 @@ module Types =
   type Event =
     | EvSummonSelect  of CardId
     | EvSummon        of CardId
-    | EvCombat        of Set<PlayerId>
+    | EvCombat        of Map<PlayerId, AttackWay>
     | EvAttackSelect  of PlayerId * AttackWay
-    | EvAttack        of PlayerId
+    | EvAttack        of PlayerId * AttackWay
     | EvDamage        of CardId * int
     | EvDie           of CardId
     | EvGameBegin
@@ -98,12 +101,13 @@ module Types =
       ObsSource   : Observable.Source<Game * Event>
     }
 
-  type GameMonad<'a> =
-    StateT<Game, Cont<GameResult, 'a * Game>>
-
   type Entrant =
     {
       Name    : string
       Deck    : Deck
       Brain   : IBrain
     }
+
+  type Error =
+    | InvalidStatusTotal of CardSpec
+    | InvalidStatusValue of CardSpec * string * int

@@ -1,47 +1,48 @@
 ﻿module ZeoFive.Cui.Program
 
+open System.IO
+open Chessie.ErrorHandling
 open ZeoFive.Core
 
-[<AutoOpen>]
-module Helper =
-  let makeCard hp atk itl spd =
-    {
-      Name    = sprintf "{%d: %d/%d (%d)}" hp atk itl spd
-      Hp      = hp
-      Atk     = atk
-      Itl     = itl
-      Spd     = spd
-    }
-
-  let makeDeckByReplicate (card: CardSpec) =
-    {
-      Name    = sprintf "5x%s" (card.Name)
-      Cards   = T5.replicate card
-    }
-
-  let makeStupidEntrant name card =
-    {
-      Name    = name
-      Deck    = makeDeckByReplicate card
-      Brain   = (Brain.StupidBrain() :> IBrain)
-    }
+let tryLoadEntrantFromFile name path =
+  trial {
+    let! json =
+      try
+        File.ReadAllText(path) |> ok
+      with
+      | e -> CantOpenDeck path |> fail
+    let! deck =
+      Deck.ofJson(json)
+      |> Deck.validate
+      |> Trial.mapFailure (List.map CoreError)
+    return
+      {
+        Name    = name
+        Deck    = deck
+        Brain   = Brain.StupidBrain()
+      }
+  }
 
 [<EntryPoint>]
-let main argv = 
-
-  let card1 = makeCard  50 50 50 50
-  let card2 = makeCard 100 60 40  0
-  let pl1   = makeStupidEntrant "50-person" card1
-  let pl2   = makeStupidEntrant "164" card2
-  let audience =
-    [
-      Broadcaster.broadcaster
-    ]
-
-  do
-    (pl1, pl2)
-    ||> ZeoFive.Game.play audience
-    |> printfn "%A"
+let main argv =
+  let r =
+    trial {
+      let! ent1 = tryLoadEntrantFromFile "You" "you_deck.json"
+      let! ent2 = tryLoadEntrantFromFile "CPU" "cpu_deck.json"
+      let audience =
+        [
+          Broadcaster.broadcaster
+        ]
+      let r =
+        (ent1, ent2)
+        ||> Game.play audience
+      return r
+    }
+  let () =
+    match r with
+    | Ok (_, _) -> ()
+    | Bad (err) ->
+        err |> List.iter (ZeoFive.Cui.Error.toString >> printfn "%s")
 
   // exit code
   0
