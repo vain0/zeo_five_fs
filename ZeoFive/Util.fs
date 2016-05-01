@@ -267,21 +267,21 @@ module Observable =
 module Serialize =
   open System.Text
   open System.Runtime.Serialization
-  open System.Runtime.Serialization.Json
+  open System.Runtime.Serialization.Yaml
 
   // https://gist.github.com/theburningmonk/2071722
   let private toString = Encoding.UTF8.GetString
   let private toBytes (x: string) = Encoding.UTF8.GetBytes x
 
-  let serializeJson<'a> (x : 'a) = 
-    let jsonSerializer = new DataContractJsonSerializer(typedefof<'a>)
+  let serializeYaml<'a> (x : 'a) = 
+    let YamlSerializer = new DataContractYamlSerializer(typedefof<'a>)
 
     use stream = new IO.MemoryStream()
-    jsonSerializer.WriteObject(stream, x)
+    YamlSerializer.WriteObject(stream, x)
     toString <| stream.ToArray()
 
-  let deserializeJson<'a> (json : string) =
-    let jsonSerializer = new DataContractJsonSerializer(typedefof<'a>)
+  let deserializeYaml<'a> (Yaml : string) =
+    let YamlSerializer = new DataContractYamlSerializer(typedefof<'a>)
 
-    use stream = new IO.MemoryStream(toBytes json)
-    jsonSerializer.ReadObject(stream) :?> 'a
+    use stream = new IO.MemoryStream(toBytes Yaml)
+    YamlSerializer.ReadObject(stream) :?> 'a
