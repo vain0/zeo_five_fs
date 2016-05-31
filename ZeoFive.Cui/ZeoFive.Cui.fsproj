@@ -8,11 +8,11 @@
     <ProjectGuid>6e441276-9478-4fe0-a856-026839e772b0</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>Cui</RootNamespace>
-    <AssemblyName>Cui</AssemblyName>
+    <AssemblyName>zeofivec</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>Cui</Name>
+    <Name>ZeoFive.Cui</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
