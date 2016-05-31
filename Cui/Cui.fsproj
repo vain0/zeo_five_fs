@@ -69,8 +69,10 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\ZeoFive\ZeoFive.fsproj">
-      <Name>ZeoFive</Name>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ZeoFive\ZeoFive.Core.fsproj">
+      <Name>ZeoFive.Core</Name>
       <Project>{abff00ba-7437-4c73-ae61-7c32d41c014b}</Project>
       <Private>True</Private>
     </ProjectReference>
